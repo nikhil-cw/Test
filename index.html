@@ -1,1 +1,2320 @@
-hello world
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FretFlow — routes for the fretboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ground:#101418;
+  --ground-2:#151a1f;
+  --panel:#1a2026;
+  --panel-2:#212930;
+  --line:#2b333a;
+  --line-soft:#222a30;
+  --board-a:#3d2c21;
+  --board-b:#221913;
+  --nickel:#c3ccd2;
+  --nickel-dim:#7d878e;
+  --brass:#e0a63c;
+  --brass-deep:#8a6524;
+  --signal:#5ed3c4;
+  --signal-deep:#2c6a64;
+  --rose:#e2695c;
+  --text:#e2e8ec;
+  --muted:#8d979e;
+  --muted-2:#5f696f;
+
+  --sans:"Instrument Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --serif:"Instrument Serif", ui-serif, Georgia, "Times New Roman", serif;
+  --mono:"JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --r:3px;
+}
+
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--ground);
+  color:var(--text);
+  font-family:var(--sans);
+  font-size:14px;
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+  min-height:100vh;
+  background-image:
+    radial-gradient(1200px 500px at 50% -180px, rgba(224,166,60,.07), transparent 70%),
+    radial-gradient(900px 400px at 100% 100%, rgba(94,211,196,.04), transparent 70%);
+  background-attachment:fixed;
+}
+button{font-family:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
+
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.eyebrow{
+  font-family:var(--mono);
+  font-size:10px;
+  letter-spacing:.18em;
+  text-transform:uppercase;
+  color:var(--muted-2);
+  margin:0;
+}
+
+/* ---------- top bar ---------- */
+.topbar{
+  display:flex;align-items:center;gap:22px;
+  padding:14px 24px;
+  border-bottom:1px solid var(--line);
+  background:rgba(16,20,24,.86);
+  backdrop-filter:blur(10px);
+  position:sticky;top:0;z-index:40;
+  flex-wrap:wrap;
+}
+.brand{display:flex;align-items:baseline;gap:10px;margin-right:auto}
+.brand-name{
+  font-family:var(--serif);
+  font-size:26px;
+  letter-spacing:.005em;
+  line-height:1;
+  color:var(--text);
+}
+.brand-name em{font-style:italic;color:var(--brass)}
+.brand-sub{
+  font-family:var(--mono);font-size:10px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--muted-2);
+}
+
+.modes{display:flex;gap:2px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:2px}
+.mode-btn{
+  appearance:none;background:none;border:0;cursor:pointer;
+  padding:7px 15px;border-radius:2px;
+  font-size:12.5px;font-weight:600;letter-spacing:.01em;
+  color:var(--muted);transition:background .16s,color .16s;
+}
+.mode-btn:hover{color:var(--text);background:var(--panel-2)}
+.mode-btn.is-active{background:var(--brass);color:#1a1207}
+.mode-btn.is-active:hover{background:var(--brass)}
+
+.topbar-right{display:flex;align-items:center;gap:10px}
+.chip{
+  font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--muted);border:1px solid var(--line);border-radius:var(--r);
+  padding:6px 10px;background:var(--panel);
+}
+.chip b{color:var(--signal);font-weight:500}
+button.chip{cursor:pointer;transition:border-color .16s,color .16s}
+button.chip:hover{border-color:var(--nickel-dim);color:var(--text)}
+button.chip[aria-pressed="false"]{color:var(--muted-2)}
+button.chip[aria-pressed="false"] .dot{background:var(--muted-2)}
+.dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--signal);margin-right:6px;vertical-align:1px}
+
+/* ---------- stage ---------- */
+.stage{padding:24px 24px 0;max-width:1500px;margin:0 auto}
+.stage-head{display:flex;align-items:flex-end;gap:18px;flex-wrap:wrap;margin-bottom:14px}
+.stage-title{
+  font-family:var(--serif);font-size:36px;line-height:1;margin:4px 0 0;font-weight:400;
+}
+.stage-title span{color:var(--brass)}
+.stage-note{margin:0 0 3px;color:var(--muted);font-size:13px;max-width:52ch}
+.stage-head .grow{margin-left:auto}
+
+.board-wrap{
+  border:1px solid var(--line);
+  border-radius:var(--r);
+  background:var(--ground-2);
+  overflow-x:auto;
+  overflow-y:hidden;
+  padding:0;
+}
+.board-wrap svg{display:block;min-width:840px;width:100%;height:auto}
+
+.board-foot{
+  display:flex;align-items:center;gap:18px;flex-wrap:wrap;
+  padding:12px 2px 0;
+}
+.legend{display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+.legend i{
+  font-style:normal;font-family:var(--mono);font-size:10px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--muted-2);display:flex;align-items:center;gap:6px;
+}
+.legend i::before{content:"";width:9px;height:9px;border-radius:50%;background:currentColor}
+.legend i.k-root::before{background:var(--brass)}
+.legend i.k-scale::before{background:var(--signal)}
+.legend i.k-path::before{background:var(--brass);box-shadow:0 0 0 3px rgba(224,166,60,.2)}
+.legend i.k-fog::before{background:var(--muted-2);opacity:.45}
+.legend i.k-chord::before{background:var(--brass)}
+.legend i.k-mute::before{background:none;box-shadow:inset 0 0 0 1px var(--muted-2)}
+
+.transport{display:flex;align-items:center;gap:10px;margin-left:auto}
+.btn{
+  appearance:none;cursor:pointer;border:1px solid var(--line);background:var(--panel);
+  color:var(--text);padding:8px 16px;border-radius:var(--r);
+  font-size:12.5px;font-weight:600;transition:border-color .16s,background .16s;
+}
+.btn:hover{border-color:var(--nickel-dim);background:var(--panel-2)}
+.btn.primary{background:var(--brass);border-color:var(--brass);color:#1a1207}
+.btn.primary:hover{background:#eeb54c;border-color:#eeb54c}
+.btn.ghost{background:none}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.sm{padding:5px 10px;font-size:11.5px;font-weight:500}
+
+input[type=range]{
+  -webkit-appearance:none;appearance:none;background:none;width:110px;cursor:pointer;
+}
+input[type=range]::-webkit-slider-runnable-track{height:2px;background:var(--line);border-radius:2px}
+input[type=range]::-moz-range-track{height:2px;background:var(--line);border-radius:2px}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:13px;height:13px;border-radius:50%;
+  background:var(--brass);margin-top:-5.5px;border:0;
+}
+input[type=range]::-moz-range-thumb{width:13px;height:13px;border-radius:50%;background:var(--brass);border:0}
+
+/* ---------- workspace ---------- */
+.workspace{
+  display:grid;grid-template-columns:330px minmax(0,1fr);gap:18px;
+  padding:22px 24px 60px;max-width:1500px;margin:0 auto;align-items:start;
+}
+.panel{
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:var(--r);
+  padding:18px;
+}
+.panel + .panel{margin-top:0}
+.panel-title{
+  font-family:var(--mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--muted-2);margin:0 0 14px;display:flex;align-items:center;gap:8px;
+}
+.panel-title::after{content:"";flex:1;height:1px;background:var(--line)}
+
+.field{margin-bottom:14px}
+.field:last-child{margin-bottom:0}
+.field > label:not(.check){
+  display:block;font-family:var(--mono);font-size:10px;letter-spacing:.13em;
+  text-transform:uppercase;color:var(--muted-2);margin-bottom:6px;
+}
+select,input[type=text],input[type=number]{
+  width:100%;background:var(--ground);border:1px solid var(--line);color:var(--text);
+  padding:9px 10px;border-radius:var(--r);font-family:var(--sans);font-size:13px;
+}
+input[type=text]{font-family:var(--mono);font-size:13px}
+select:hover,input:hover{border-color:var(--nickel-dim)}
+
+.seg{display:flex;flex-wrap:wrap;gap:4px}
+.seg button{
+  appearance:none;cursor:pointer;border:1px solid var(--line);background:var(--ground);
+  color:var(--muted);padding:6px 10px;border-radius:var(--r);
+  font-family:var(--mono);font-size:11px;letter-spacing:.04em;transition:.16s;
+}
+.seg button:hover{color:var(--text);border-color:var(--nickel-dim)}
+.seg button.on{background:var(--signal-deep);border-color:var(--signal);color:#e6fffb}
+.seg.brass button.on{background:var(--brass-deep);border-color:var(--brass);color:#ffeecb}
+
+.check{display:flex;align-items:center;gap:9px;padding:6px 0;cursor:pointer;color:var(--muted)}
+.check:hover{color:var(--text)}
+.check input{accent-color:var(--signal);width:14px;height:14px;margin:0}
+.check span{font-size:12.5px}
+
+.hint{font-size:11.5px;color:var(--muted-2);line-height:1.5;margin:10px 0 0}
+
+/* ---------- readout ---------- */
+.readout-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px}
+
+.metric{border:1px solid var(--line);border-radius:var(--r);padding:12px 13px;background:var(--ground-2)}
+.metric-label{
+  font-family:var(--mono);font-size:9.5px;letter-spacing:.15em;text-transform:uppercase;
+  color:var(--muted-2);
+}
+.metric-val{font-family:var(--mono);font-size:24px;color:var(--text);line-height:1.15;margin-top:5px}
+.metric-val small{font-size:11px;color:var(--muted-2)}
+.metric-cap{font-family:var(--mono);font-size:10.5px;color:var(--muted);margin-top:3px}
+.bar{height:3px;background:var(--line);border-radius:2px;margin-top:8px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--signal);border-radius:2px;transition:width .35s ease}
+.bar.warm i{background:var(--brass)}
+.bar.hot i{background:var(--rose)}
+
+.tab{
+  font-family:var(--mono);font-size:12px;line-height:1.65;white-space:pre;
+  overflow-x:auto;color:var(--nickel);background:var(--ground);
+  border:1px solid var(--line);border-radius:var(--r);padding:12px 13px;
+}
+.tab .lbl{color:var(--muted-2)}
+
+.rows{display:flex;flex-direction:column;gap:6px}
+.row{
+  display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;
+  border:1px solid var(--line);border-radius:var(--r);background:var(--ground-2);
+  padding:10px 12px;cursor:pointer;transition:border-color .16s,background .16s;
+  text-align:left;width:100%;font-family:inherit;font-size:inherit;
+}
+.row:hover{border-color:var(--nickel-dim);background:var(--panel-2)}
+.row.on{border-color:var(--brass);background:rgba(224,166,60,.07)}
+.row-name{font-weight:600;font-size:13px}
+.row-name em{font-style:normal;color:var(--muted);font-weight:400;font-family:var(--mono);font-size:11px;margin-left:8px}
+.row-sub{font-family:var(--mono);font-size:10.5px;color:var(--muted-2);letter-spacing:.04em;margin-top:3px}
+.row-scores{display:flex;gap:10px;font-family:var(--mono);font-size:10.5px;color:var(--muted)}
+.row-scores b{color:var(--text);font-weight:500}
+
+.mini-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(146px,1fr));gap:11px}
+.mini{border:1px solid var(--line);border-radius:var(--r);background:var(--ground);padding:11px 11px 8px;cursor:pointer;transition:.16s}
+.mini:hover{border-color:var(--nickel-dim)}
+.mini.on{border-color:var(--brass);background:rgba(224,166,60,.07)}
+.mini-name{font-family:var(--mono);font-size:11.5px;color:var(--text);margin-bottom:7px;
+  display:flex;justify-content:space-between;align-items:baseline;gap:6px;min-height:15px}
+.mini-name b{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mini-name span{color:var(--muted-2);font-size:9.5px;letter-spacing:.06em;flex:none}
+.mini svg{display:block;width:100%;height:auto}
+
+.empty{
+  border:1px dashed var(--line);border-radius:var(--r);padding:26px 18px;text-align:center;
+  color:var(--muted-2);font-size:12.5px;
+}
+
+.mission{
+  border:1px solid var(--line);border-radius:var(--r);background:var(--ground-2);
+  padding:14px;display:flex;flex-direction:column;gap:9px;
+}
+.mission.on{border-color:var(--brass)}
+.mission.done{border-color:var(--signal-deep)}
+.mission-goal{font-family:var(--serif);font-size:19px;line-height:1.25}
+.mission-why{font-size:12px;color:var(--muted);line-height:1.5}
+.tags{display:flex;gap:5px;flex-wrap:wrap}
+.tag{
+  font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;
+  border:1px solid var(--line);color:var(--muted-2);padding:3px 7px;border-radius:2px;
+}
+.tag.ok{border-color:var(--signal-deep);color:var(--signal)}
+.tag.no{border-color:var(--rose);color:var(--rose)}
+.mission-foot{display:flex;gap:8px;align-items:center;margin-top:2px}
+.verdict{font-family:var(--mono);font-size:11px;letter-spacing:.05em;margin-left:auto}
+.verdict.ok{color:var(--signal)}
+.verdict.no{color:var(--rose)}
+
+.gravity-wrap{display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
+#gravity{display:block;width:100%;height:auto;max-height:420px}
+.gnode{cursor:pointer}
+.gnode:hover circle{stroke:var(--nickel)}
+
+.split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px}
+
+@media (max-width:1080px){
+  .workspace{grid-template-columns:1fr}
+  .split{grid-template-columns:1fr}
+}
+@media (max-width:720px){
+  .topbar{padding:12px 14px;gap:12px}
+  .brand-sub{display:none}
+  .stage{padding:16px 14px 0}
+  .workspace{padding:16px 14px 48px}
+  .stage-title{font-size:28px}
+  .transport{margin-left:0;width:100%}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.001ms !important;transition-duration:.001ms !important}
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-name">Fret<em>Flow</em></span>
+    <span class="brand-sub">routes for the fretboard</span>
+  </div>
+  <nav class="modes" role="tablist" aria-label="Mode">
+    <button class="mode-btn is-active" data-mode="explore" role="tab" aria-selected="true">Explore</button>
+    <button class="mode-btn" data-mode="navigate" role="tab" aria-selected="false">Navigate</button>
+    <button class="mode-btn" data-mode="chords" role="tab" aria-selected="false">Chords</button>
+    <button class="mode-btn" data-mode="missions" role="tab" aria-selected="false">Missions</button>
+  </nav>
+  <div class="topbar-right">
+    <button id="soundBtn" class="chip" aria-pressed="true"><span class="dot"></span>Sound on</button>
+    <span class="chip" id="fogChip">Neck <b>0%</b> mapped</span>
+  </div>
+</header>
+
+<section class="stage">
+  <div class="stage-head">
+    <div>
+      <p class="eyebrow" id="stageEyebrow">Explore</p>
+      <h1 class="stage-title" id="stageTitle">C major</h1>
+    </div>
+    <p class="stage-note" id="stageNote"></p>
+  </div>
+
+  <div class="board-wrap">
+    <svg id="board" xmlns="http://www.w3.org/2000/svg"></svg>
+  </div>
+
+  <div class="board-foot">
+    <div class="legend" id="legend"></div>
+    <div class="transport">
+      <button class="btn primary" id="playBtn">Play</button>
+      <button class="btn ghost sm" id="stepBtn">Step</button>
+      <input type="range" id="tempo" min="40" max="220" step="2" value="96" aria-label="Tempo">
+      <span class="mono" id="tempoVal" style="font-size:11px;color:var(--muted)">96 BPM</span>
+    </div>
+  </div>
+</section>
+
+<div class="workspace">
+  <aside class="panel" id="controls"></aside>
+  <section id="readout" style="display:flex;flex-direction:column;gap:18px"></section>
+</div>
+
+<script>
+/* =========================================================================
+   FRETFLOW ENGINE
+   Every note on the neck is a node. Moving between nodes has a cost.
+   Everything the app claims is computed from that one idea.
+   ========================================================================= */
+
+const STRINGS = 6, FRETS = 15;
+const OPEN = [40, 45, 50, 55, 59, 64];          // idx 0 = low E (6th string)
+const STR_NAME = ['E', 'A', 'D', 'G', 'B', 'e'];
+const SHARP = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const FLAT  = ['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'];
+const IVL   = ['R','b2','2','b3','3','4','b5','5','b6','6','b7','7'];
+const DEG   = ['1','b2','2','b3','3','4','b5','5','b6','6','b7','7'];
+
+const midiAt = (s, f) => OPEN[s] + f;
+const pcAt   = (s, f) => (OPEN[s] + f) % 12;
+const freqOf = m => 440 * Math.pow(2, (m - 69) / 12);
+const key    = (s, f) => s + ':' + f;
+const clamp  = (v, a, b) => Math.max(a, Math.min(b, v));
+
+function noteName(pc, flats) { return (flats ? FLAT : SHARP)[((pc % 12) + 12) % 12]; }
+
+const SCALES = {
+  major:            { name: 'Major (Ionian)',   iv: [0,2,4,5,7,9,11],   blurb: 'The reference grid. Everything else is heard against it.' },
+  natural_minor:    { name: 'Natural minor',    iv: [0,2,3,5,7,8,10],   blurb: 'Major with a flat 3, 6 and 7. Same shapes, new centre of gravity.' },
+  pent_major:       { name: 'Major pentatonic', iv: [0,2,4,7,9],        blurb: 'Major with the two half-steps removed. Nothing left to clash.' },
+  pent_minor:       { name: 'Minor pentatonic', iv: [0,3,5,7,10],       blurb: 'Five notes, two per string, the backbone of rock lead playing.' },
+  blues:            { name: 'Blues',            iv: [0,3,5,6,7,10],     blurb: 'Minor pentatonic plus the b5 passing tone between 4 and 5.' },
+  dorian:           { name: 'Dorian',           iv: [0,2,3,5,7,9,10],   blurb: 'Minor with a natural 6. Brighter than natural minor, still sad.' },
+  phrygian:         { name: 'Phrygian',         iv: [0,1,3,5,7,8,10],   blurb: 'Minor with a b2. That half-step off the root does all the work.' },
+  lydian:           { name: 'Lydian',           iv: [0,2,4,6,7,9,11],   blurb: 'Major with a #4. Floating, unresolved, no pull toward the 4.' },
+  mixolydian:       { name: 'Mixolydian',       iv: [0,2,4,5,7,9,10],   blurb: 'Major with a b7. The sound of a dominant chord held open.' },
+  locrian:          { name: 'Locrian',          iv: [0,1,3,5,6,8,10],   blurb: 'b2 and b5. No stable 5th, so the root barely holds.' },
+  harmonic_minor:   { name: 'Harmonic minor',   iv: [0,2,3,5,7,8,11],   blurb: 'Natural minor with the 7 raised back up. Leaves an odd 3-fret gap.' },
+  melodic_minor:    { name: 'Melodic minor',    iv: [0,2,3,5,7,9,11],   blurb: 'Major with a b3, nothing else. Source of most jazz alterations.' },
+  whole_tone:       { name: 'Whole tone',       iv: [0,2,4,6,8,10],     blurb: 'All whole steps. No root, no leading tone, six identical shapes.' },
+  dim_hw:           { name: 'Diminished (H-W)', iv: [0,1,3,4,6,7,9,10], blurb: 'Alternating half and whole steps. Repeats every 3 frets exactly.' },
+};
+
+const CHORDS = {
+  'maj':      { iv:[0,4,7],            label:'',        full:'major' },
+  'min':      { iv:[0,3,7],            label:'m',       full:'minor' },
+  'dim':      { iv:[0,3,6],            label:'dim',     full:'diminished' },
+  'aug':      { iv:[0,4,8],            label:'+',       full:'augmented' },
+  'sus2':     { iv:[0,2,7],            label:'sus2',    full:'suspended 2nd' },
+  'sus4':     { iv:[0,5,7],            label:'sus4',    full:'suspended 4th' },
+  '5':        { iv:[0,7],              label:'5',       full:'power chord' },
+  '6':        { iv:[0,4,7,9],          label:'6',       full:'major 6th' },
+  'm6':       { iv:[0,3,7,9],          label:'m6',      full:'minor 6th' },
+  '7':        { iv:[0,4,7,10],         label:'7',       full:'dominant 7th' },
+  'maj7':     { iv:[0,4,7,11],         label:'maj7',    full:'major 7th' },
+  'm7':       { iv:[0,3,7,10],         label:'m7',      full:'minor 7th' },
+  'm7b5':     { iv:[0,3,6,10],         label:'m7b5',    full:'half-diminished' },
+  'dim7':     { iv:[0,3,6,9],          label:'dim7',    full:'diminished 7th' },
+  'mmaj7':    { iv:[0,3,7,11],         label:'m(maj7)', full:'minor-major 7th' },
+  'add9':     { iv:[0,4,7,14],         label:'add9',    full:'added 9th' },
+  'madd9':    { iv:[0,3,7,14],         label:'m(add9)', full:'minor added 9th' },
+  '69':       { iv:[0,4,7,9,14],       label:'6/9',     full:'six-nine' },
+  '9':        { iv:[0,4,7,10,14],      label:'9',       full:'dominant 9th' },
+  'maj9':     { iv:[0,4,7,11,14],      label:'maj9',    full:'major 9th' },
+  'm9':       { iv:[0,3,7,10,14],      label:'m9',      full:'minor 9th' },
+  '11':       { iv:[0,7,10,14,17],     label:'11',      full:'dominant 11th' },
+  'm11':      { iv:[0,3,7,10,14,17],   label:'m11',     full:'minor 11th' },
+  '13':       { iv:[0,4,7,10,14,21],   label:'13',      full:'dominant 13th' },
+  'maj13':    { iv:[0,4,7,11,14,21],   label:'maj13',   full:'major 13th' },
+  'm13':      { iv:[0,3,7,10,14,21],   label:'m13',     full:'minor 13th' },
+  '7b9':      { iv:[0,4,7,10,13],      label:'7b9',     full:'dominant flat 9' },
+  '7s9':      { iv:[0,4,7,10,15],      label:'7#9',     full:'dominant sharp 9' },
+  '7s5':      { iv:[0,4,8,10],         label:'7#5',     full:'dominant sharp 5' },
+  '7b5':      { iv:[0,4,6,10],         label:'7b5',     full:'dominant flat 5' },
+  '7s11':     { iv:[0,4,7,10,14,18],   label:'7#11',    full:'dominant sharp 11' },
+  'maj7s11':  { iv:[0,4,7,11,18],      label:'maj7#11', full:'major 7 sharp 11' },
+  'maj9s11':  { iv:[0,4,7,11,14,18],   label:'maj9#11', full:'major 9 sharp 11' },
+  'm7b9':     { iv:[0,3,7,10,13],      label:'m7b9',    full:'minor 7 flat 9' },
+};
+
+/* text the user might type -> canonical key above */
+const QUALITY_ALIAS = {
+  '':'maj','maj':'maj','major':'maj','M':'maj','ma':'maj',
+  'm':'min','min':'min','minor':'min','-':'min',
+  'dim':'dim','o':'dim','°':'dim',
+  'aug':'aug','+':'aug','#5':'aug',
+  'sus':'sus4','sus2':'sus2','sus4':'sus4',
+  '5':'5','no3':'5',
+  '6':'6','maj6':'6','M6':'6',
+  'm6':'m6','min6':'m6','-6':'m6',
+  '7':'7','dom7':'7','dom':'7',
+  'maj7':'maj7','M7':'maj7','ma7':'maj7','Δ':'maj7','Δ7':'maj7','major7':'maj7',
+  'm7':'m7','min7':'m7','-7':'m7',
+  'm7b5':'m7b5','ø':'m7b5','ø7':'m7b5','halfdim':'m7b5','h7':'m7b5',
+  'dim7':'dim7','o7':'dim7','°7':'dim7',
+  'mmaj7':'mmaj7','mM7':'mmaj7','m#7':'mmaj7','minmaj7':'mmaj7',
+  'add9':'add9','add2':'add9','madd9':'madd9','madd2':'madd9','m(add9)':'madd9',
+  '69':'69','6/9':'69','6add9':'69',
+  '9':'9','dom9':'9','maj9':'maj9','M9':'maj9','Δ9':'maj9',
+  'm9':'m9','min9':'m9','-9':'m9',
+  '11':'11','m11':'m11','min11':'m11','-11':'m11',
+  '13':'13','maj13':'maj13','M13':'maj13','m13':'m13','min13':'m13',
+  '7b9':'7b9','7-9':'7b9','7#9':'7s9','7+9':'7s9',
+  '7#5':'7s5','7+5':'7s5','7alt':'7s9','alt':'7s9',
+  '7b5':'7b5','7-5':'7b5',
+  '7#11':'7s11','7+11':'7s11',
+  'maj7#11':'maj7s11','M7#11':'maj7s11','Δ7#11':'maj7s11',
+  'maj9#11':'maj9s11','M9#11':'maj9s11','Δ9#11':'maj9s11','lydian':'maj9s11',
+  'm7b9':'m7b9',
+};
+
+function parseChord(text) {
+  const t = String(text || '').trim().replace(/\s+/g, '');
+  if (!t) return null;
+  const m = t.match(/^([A-Ga-g])([#b♯♭]?)(.*)$/);
+  if (!m) return null;
+  const letters = { c:0, d:2, e:4, f:5, g:7, a:9, b:11 };
+  let pc = letters[m[1].toLowerCase()];
+  if (m[2] === '#' || m[2] === '♯') pc += 1;
+  if (m[2] === 'b' || m[2] === '♭') pc -= 1;
+  pc = ((pc % 12) + 12) % 12;
+
+  let rest = m[3], slashPc = null;
+  const slash = rest.split('/');
+  if (slash.length === 2 && /^[A-Ga-g][#b♯♭]?$/.test(slash[1])) {
+    rest = slash[0];
+    let bp = letters[slash[1][0].toLowerCase()];
+    if (slash[1][1] === '#' || slash[1][1] === '♯') bp += 1;
+    if (slash[1][1] === 'b' || slash[1][1] === '♭') bp -= 1;
+    slashPc = ((bp % 12) + 12) % 12;
+  } else if (rest === '6/9') { /* keep */ }
+
+  let q = QUALITY_ALIAS[rest];
+  if (q === undefined) q = QUALITY_ALIAS[rest.toLowerCase()];
+  if (q === undefined) return null;
+
+  const flats = m[2] === 'b' || m[2] === '♭' || [1,3,5,8,10].includes(pc) && m[2] === '';
+  return { pc, q, bass: slashPc, flats: m[2] === 'b' || m[2] === '♭',
+           name: noteName(pc, m[2] === 'b') + CHORDS[q].label + (slashPc !== null ? '/' + noteName(slashPc, m[2] === 'b') : ''),
+           spec: CHORDS[q] };
+}
+
+/* pitch classes a chord contains */
+function chordPcs(ch) {
+  const set = new Set(ch.spec.iv.map(i => (ch.pc + i) % 12));
+  if (ch.bass !== null && ch.bass !== undefined) set.add(ch.bass);
+  return set;
+}
+/* map pitch class -> the interval label it plays in this chord */
+function chordRoleMap(ch) {
+  const map = {};
+  ch.spec.iv.forEach(i => {
+    const pc = (ch.pc + i) % 12;
+    const lbl = i >= 12 ? ({12:'8',13:'b9',14:'9',15:'#9',17:'11',18:'#11',21:'13'}[i] || IVL[i % 12]) : IVL[i];
+    if (!(pc in map)) map[pc] = lbl;
+  });
+  return map;
+}
+
+/* =========================================================================
+   COST MODEL — the heart of it
+   ========================================================================= */
+
+/* how far apart two frets feel, accounting for frets narrowing up the neck */
+function fretGap(f1, f2) {
+  if (f1 === 0 || f2 === 0) return Math.abs(f1 - f2) * 0.45;   // open strings are free-ish
+  const mid = (f1 + f2) / 2;
+  const narrow = 1 - clamp(mid / 24, 0, 0.42);                  // frets shrink up the neck
+  return Math.abs(f1 - f2) * narrow;
+}
+
+const PROFILES = {
+  effort: { name:'Least effort',   fret:1.0, str:0.50, shift:1.15, stretch:1.0, open:-0.5, run:0,
+            blurb:'Balances hand relocation, string crossing and stretch. The default route.' },
+  anchor: { name:'Stay put',       fret:1.0, str:0.35, shift:7.0, stretch:0.45, open:-0.3, run:0,
+            blurb:'Punishes moving the hand. You will stretch for notes instead of travelling to them.' },
+  linear: { name:'One string',     fret:0.5, str:5.5, shift:0.25, stretch:0.8, open:-0.2, run:0,
+            blurb:'Punishes string crossing, so the line runs lengthwise up a single string.' },
+  three:  { name:'3 per string',   fret:0.8, str:0.15, shift:0.9, stretch:0.6, open:0.5, run:3.0, runTarget:3,
+            blurb:'Groups three notes to a string. The standard shape for alternate picking.' },
+  legato: { name:'Legato',         fret:0.6, str:1.1, shift:0.7, stretch:0.7, open:0.2, run:2.6, runTarget:4,
+            blurb:'Groups four notes to a string so most of them can be slurred, not picked.' },
+};
+
+/* cost of moving from node a to node b under a weight profile.
+   runLen = how many notes already played on b's string in a row. */
+function stepCost(a, b, p, runLen) {
+  if (!a) return b.f === 0 ? p.open : 0;
+  const df = fretGap(a.f, b.f);
+  const ds = Math.abs(a.s - b.s);
+  let c = df * p.fret + ds * p.str;
+  if (ds > 1) c += (ds - 1) * 1.4 * p.str;                  // string skipping is extra awkward
+  if (a.f > 0 && b.f > 0 && Math.abs(a.f - b.f) > 3) c += p.shift * (Math.abs(a.f - b.f) - 3) * 0.6 + p.shift;
+  if (a.f > 0 && b.f > 0 && Math.abs(a.f - b.f) === 3) c += p.stretch * 0.5;
+  if (b.f === 0) c += p.open;
+  if (b.f > 12) c += 0.5;                                    // body of the guitar gets in the way
+  if (p.run) {
+    const target = p.runTarget || 3;
+    if (a.s === b.s) c += (runLen >= target ? p.run : -p.run * 0.35);
+    else c += (runLen === target ? -p.run * 0.5 : 0);
+  }
+  return c;
+}
+
+/* all board positions producing a given midi pitch */
+function positionsForMidi(midi, opts = {}) {
+  const out = [];
+  for (let s = 0; s < STRINGS; s++) {
+    const f = midi - OPEN[s];
+    if (f < 0 || f > FRETS) continue;
+    if (opts.noOpen && f === 0) continue;
+    if (opts.strings && !opts.strings.includes(s)) continue;
+    if (opts.minFret !== undefined && f !== 0 && f < opts.minFret) continue;
+    if (opts.maxFret !== undefined && f > opts.maxFret) continue;
+    out.push({ s, f, midi });
+  }
+  return out;
+}
+
+/* all board positions of a pitch class */
+function positionsForPc(pc, opts = {}) {
+  const out = [];
+  for (let s = 0; s < STRINGS; s++) {
+    for (let f = 0; f <= FRETS; f++) {
+      if (pcAt(s, f) !== pc) continue;
+      if (opts.noOpen && f === 0) continue;
+      if (opts.strings && !opts.strings.includes(s)) continue;
+      out.push({ s, f, midi: midiAt(s, f) });
+    }
+  }
+  return out;
+}
+
+/* -------------------------------------------------------------------------
+   PATHFINDER
+   A note sequence is a layered graph. But a fretboard route is not just a list
+   of notes — it is also a sequence of hand positions. So the state carried
+   through the search is (where the note is, where the hand is anchored).
+   That is what makes "sliding up one string" correctly expensive: each small
+   fret step drags the whole hand with it.
+   ------------------------------------------------------------------------- */
+const REACH = 3;                     // index finger covers a fret, the other three reach 3 more
+const REACH_PEN = [0, 0, 0.2, 0.55]; // stretching to the ring and little finger costs a little
+
+function findPath(pitchSeq, profile, opts = {}) {
+  const p = typeof profile === 'string' ? PROFILES[profile] : profile;
+  const layers = pitchSeq.map(m => positionsForMidi(m, opts));
+  if (!layers.length || layers.some(l => l.length === 0)) return null;
+
+  const aMax = Math.max(1, FRETS - REACH);
+  const anchorsFor = n => {
+    if (n.f === 0) return null;                       // an open string needs no hand at all
+    const out = [];
+    for (let a = Math.max(1, n.f - REACH); a <= Math.min(n.f, aMax); a++) out.push(a);
+    return out;
+  };
+  const holdCost = (n, a) => (n.f === 0 ? p.open : REACH_PEN[n.f - a] * p.stretch) + (n.f > 12 ? 0.4 : 0);
+
+  const table = [];
+  let cur = [];
+  layers[0].forEach((n, ni) => {
+    const as = anchorsFor(n) || Array.from({ length: aMax }, (_, i) => i + 1);
+    as.forEach(a => {
+      let c = holdCost(n, a);
+      if (opts.startNear !== undefined) c += Math.abs(a - Math.max(1, opts.startNear)) * 0.6;
+      cur.push({ ni, a, run: 1, cost: c, back: -1 });
+    });
+  });
+  table.push(cur);
+
+  for (let i = 1; i < layers.length; i++) {
+    const next = new Map();
+    for (let j = 0; j < cur.length; j++) {
+      const st = cur[j], from = layers[i - 1][st.ni];
+      layers[i].forEach((n, ni) => {
+        const ds = Math.abs(n.s - from.s);
+        let move = ds * p.str + (ds > 1 ? (ds - 1) * 1.4 * p.str : 0);
+        move += fretGap(from.f, n.f) * p.fret * 0.3;   // the finger still has to travel
+        if (p.run) {
+          const target = p.runTarget || 3;
+          if (from.s === n.s) move += (st.run >= target ? p.run : -p.run * 0.35);
+          else move += (st.run === target ? -p.run * 0.5 : 0);
+        }
+        const run = from.s === n.s ? st.run + 1 : 1;
+        const as = anchorsFor(n) || [st.a];
+        for (const a of as) {
+          const shift = Math.abs(a - st.a);
+          const c = st.cost + move + holdCost(n, a) + shift * p.shift + (shift ? p.shift * 0.5 : 0);
+          const k = ni + ':' + a;
+          const seen = next.get(k);
+          if (!seen || c < seen.cost) next.set(k, { ni, a, run, cost: c, back: j });
+        }
+      });
+    }
+    cur = [...next.values()];
+    if (!cur.length) return null;
+    table.push(cur);
+  }
+
+  let bi = 0;
+  for (let i = 1; i < cur.length; i++) if (cur[i].cost < cur[bi].cost) bi = i;
+  const total = cur[bi].cost;
+
+  const path = [], anchors = [];
+  let li = table.length - 1, si = bi;
+  while (li >= 0) {
+    const st = table[li][si];
+    path.unshift(layers[li][st.ni]);
+    anchors.unshift(st.a);
+    si = st.back; li--;
+  }
+  return { path, anchors, cost: total, profile: p, stats: pathStats(path, anchors) };
+}
+
+/* human-readable metrics for a finished route */
+function pathStats(path, anchors) {
+  let crossings = 0, skips = 0, opens = 0, maxStretch = 0, fingerTravel = 0;
+  let minF = 99, maxF = 0;
+  const runs = []; let run = 1;
+
+  path.forEach((n, i) => {
+    if (n.f === 0) opens++;
+    else { minF = Math.min(minF, n.f); maxF = Math.max(maxF, n.f); }
+    if (anchors && n.f > 0) maxStretch = Math.max(maxStretch, n.f - anchors[i]);
+    if (i === 0) return;
+    const a = path[i - 1];
+    fingerTravel += Math.abs(a.f - n.f);
+    if (a.s !== n.s) { crossings++; if (Math.abs(a.s - n.s) > 1) skips++; runs.push(run); run = 1; }
+    else run++;
+  });
+  runs.push(run);
+
+  // hand travel is anchor movement — the thing your arm actually does
+  let travel = 0, shifts = 0;
+  if (anchors) for (let i = 1; i < anchors.length; i++) {
+    const d = Math.abs(anchors[i] - anchors[i - 1]);
+    if (d) { shifts++; travel += d; }
+  }
+
+  const span = maxF >= minF ? maxF - minF : 0;
+  const avgRun = Math.round((runs.reduce((a, b) => a + b, 0) / runs.length) * 10) / 10;
+  return {
+    notes: path.length, travel, fingerTravel, shifts, crossings, skips, opens,
+    span, maxStretch, avgRun,
+    lowFret: minF === 99 ? 0 : minF, highFret: maxF,
+    positions: anchors ? [...new Set(anchors)].sort((a, b) => a - b) : [],
+    movement: clamp(Math.round((travel / Math.max(1, path.length - 1)) * 6), 0, 10),
+    stretchScore: clamp(Math.round(maxStretch * 2.8), 0, 10),
+    shiftScore: clamp(Math.round(shifts * 2.2), 0, 10),
+  };
+}
+
+/* =========================================================================
+   CHORD VOICING COMPILER
+   Brute-force every playable shape, then rank.
+   ========================================================================= */
+
+function assignFingers(frets) {
+  // frets: array of 6, -1 = muted, 0 = open, n = fretted
+  const fretted = [];
+  frets.forEach((f, s) => { if (f > 0) fretted.push({ s, f }); });
+  if (!fretted.length)
+    return { fingers: frets.map(f => (f === 0 ? 0 : -1)), barre: null, ok: true, span: 0, fingersUsed: 0 };
+
+  const uniq = [...new Set(fretted.map(x => x.f))].sort((a, b) => a - b);
+  const span = uniq[uniq.length - 1] - uniq[0];
+  if (span > (uniq[0] >= 5 ? 5 : 4)) return { ok: false };
+  if (uniq.length > 4) return { ok: false };
+
+  const groupOf = f => fretted.filter(x => x.f === f).map(x => x.s).sort((a, b) => a - b);
+  // can one finger lie flat across every string in this fret group?
+  const flatOk = f => {
+    const g = groupOf(f), lo = g[0], hi = g[g.length - 1];
+    for (let s = lo + 1; s < hi; s++) {
+      if (frets[s] === 0) return false;          // that string would be silenced
+      if (frets[s] > 0 && frets[s] < f) return false;  // something needs a lower fret under it
+    }
+    return true;
+  };
+
+  const lowest = uniq[0];
+  let barre = null, fingersUsed;
+
+  let awkward = 0;
+  uniq.forEach(f => { if (groupOf(f).length > 1 && !flatOk(f)) awkward++; });
+
+  if (fretted.length <= 4) {
+    // four or fewer fretted strings: one finger each, nothing needs barring
+    fingersUsed = fretted.length;
+  } else {
+    // more fretted strings than fingers, so the index has to lie across the lowest fret
+    const g = groupOf(lowest);
+    if (g.length < 2 || !flatOk(lowest)) return { ok: false };
+    barre = { fret: lowest, from: g[0], to: g[g.length - 1] };
+    let n = 1;
+    for (const f of uniq.slice(1)) {
+      const gg = groupOf(f);
+      if (gg.length > 1 && !flatOk(f)) return { ok: false };
+      n += 1;
+    }
+    if (n > 4) return { ok: false };
+    fingersUsed = n;
+  }
+
+  // number the fingers: low frets first, and low strings first within a fret
+  const fingers = frets.map(() => -1);
+  frets.forEach((f, s) => { if (f === 0) fingers[s] = 0; });
+  if (barre) {
+    const fingerOf = {};
+    uniq.forEach((f, i) => { fingerOf[f] = i + 1; });
+    frets.forEach((f, s) => { if (f > 0) fingers[s] = fingerOf[f]; });
+  } else {
+    fretted.slice().sort((a, b) => a.f - b.f || a.s - b.s)
+      .forEach((x, i) => { fingers[x.s] = i + 1; });
+  }
+  return { fingers, barre, ok: true, span, fingersUsed, awkward };
+}
+
+function voicingsFor(ch, opts = {}) {
+  const pcs = [...chordPcs(ch)];
+  const roles = chordRoleMap(ch);
+  const iv = ch.spec.iv;
+  const size = iv.length;
+
+  // which pitch classes are allowed to be missing
+  const optional = new Set();
+  if (size >= 3 && iv.includes(7) && !iv.includes(6) && !iv.includes(8)) optional.add((ch.pc + 7) % 12);
+  if (size >= 5 && (iv.includes(17) || iv.includes(21) || iv.includes(18))) optional.add((ch.pc + 14) % 12);
+  if (size >= 6) optional.add((ch.pc + 7) % 12);
+  const required = pcs.filter(pc => !optional.has(pc));
+  const rootPc = ch.pc;
+  const bassPc = (ch.bass !== null && ch.bass !== undefined) ? ch.bass : rootPc;
+
+  const maxFret = opts.maxFret ?? 14;
+  const results = [];
+  const seen = new Set();
+
+  for (let base = 0; base <= maxFret - 3; base++) {
+    const lo = base, hi = base + 4;
+    const cands = [];
+    for (let s = 0; s < STRINGS; s++) {
+      const c = [-1];
+      if (base <= 3 && !opts.noOpen && pcs.includes(pcAt(s, 0))) c.push(0);
+      for (let f = Math.max(1, lo); f <= Math.min(FRETS, hi); f++) {
+        if (pcs.includes(pcAt(s, f))) c.push(f);
+      }
+      cands.push(c);
+    }
+
+    const cur = new Array(STRINGS).fill(-1);
+    (function dfs(s, sounding) {
+      if (s === STRINGS) {
+        if (sounding < (size >= 4 ? 4 : 3)) return;
+        const got = new Set();
+        cur.forEach((f, i) => { if (f >= 0) got.add(pcAt(i, f)); });
+        for (const r of required) if (!got.has(r)) return;
+        if (!got.has(rootPc)) return;
+
+        // lowest sounding string should carry the bass note
+        let lowIdx = cur.findIndex(f => f >= 0);
+        if (pcAt(lowIdx, cur[lowIdx]) !== bassPc) {
+          if (opts.strictBass) return;
+        }
+        // no more than one internal mute
+        let gaps = 0, started = false, ended = false;
+        for (let i = 0; i < STRINGS; i++) {
+          if (cur[i] >= 0) { if (ended) gaps++; started = true; }
+          else if (started) ended = true;
+        }
+        if (gaps > 1) return;
+
+        const fg = assignFingers(cur);
+        if (!fg.ok) return;
+
+        const id = cur.join(',');
+        if (seen.has(id)) return;
+        seen.add(id);
+        results.push(scoreVoicing(cur.slice(), fg, ch, roles, bassPc));
+        return;
+      }
+      for (const f of cands[s]) {
+        cur[s] = f;
+        // prune: running span already too wide
+        if (f > 0) {
+          const fr = cur.filter(x => x > 0);
+          if (Math.max(...fr) - Math.min(...fr) > 5) { cur[s] = -1; continue; }
+        }
+        dfs(s + 1, sounding + (f >= 0 ? 1 : 0));
+      }
+      cur[s] = -1;
+    })(0, 0);
+  }
+
+  return results;
+}
+
+function scoreVoicing(frets, fg, ch, roles, bassPc) {
+  const notes = [];
+  frets.forEach((f, s) => { if (f >= 0) notes.push({ s, f, midi: midiAt(s, f), pc: pcAt(s, f) }); });
+  const fretted = frets.filter(f => f > 0);
+  const span = fretted.length ? Math.max(...fretted) - Math.min(...fretted) : 0;
+  const lowFret = fretted.length ? Math.min(...fretted) : 0;
+  const opens = frets.filter(f => f === 0).length;
+  const mutes = frets.filter(f => f === -1).length;
+
+  const avgMidi = notes.reduce((a, n) => a + n.midi, 0) / notes.length;
+  const topMidi = Math.max(...notes.map(n => n.midi));
+  const pcSet = new Set(notes.map(n => n.pc));
+  const colourTones = [...pcSet].filter(pc => {
+    const r = roles[pc];
+    return r && ['9','b9','#9','11','#11','13','7','b7','6'].includes(r);
+  }).length;
+
+  // 0-10 scales
+  const stretch = clamp(Math.round(span * 2.2 + (fg.fingersUsed || 0) * 0.5 - opens * 0.4), 0, 10);
+  const bright  = clamp(Math.round(((avgMidi - 44) / 22) * 6 + ((topMidi - 55) / 14) * 2.5 + colourTones * 0.5), 0, 10);
+  const rich    = clamp(Math.round(pcSet.size * 1.5 + colourTones * 1.1 - (mutes * 0.3)), 0, 10);
+  const ease    = clamp(10 - Math.round(span * 1.9 + (fg.barre ? 2.2 : 0) + (fg.fingersUsed || 0) * 0.45
+                                     + (fg.awkward || 0) * 1.5 - opens * 1.1), 0, 10);
+  const bassOk  = !!(notes.length && notes[0].pc === bassPc);
+
+  // does it contain every tone the chord names, including the optional ones?
+  const wanted = new Set(ch.spec.iv.map(i => (ch.pc + i) % 12));
+  let missing = 0; wanted.forEach(pc => { if (!pcSet.has(pc)) missing++; });
+
+  // how good a representation of this chord it is, before taste enters
+  const quality =
+      ease * 1.35
+    + (Math.min(notes.length, 5) - 3) * 2.2   // fuller shapes beat fragments, but 6 isn't better than 5
+    + (bassOk ? 3.0 : -2.2)              // the named root belongs in the bass
+    - missing * 1.6                      // dropped tones cost
+    - mutes * 0.8
+    + (fg.barre ? -0.6 : 0);
+
+  return {
+    frets, fingers: fg.fingers, barre: fg.barre, notes, span, lowFret, opens, mutes,
+    stretch, bright, rich, ease, bassOk, missing, quality: Math.round(quality * 100) / 100,
+    fingersUsed: fg.fingersUsed || 0,
+    roles: notes.map(n => roles[n.pc] || '·'),
+    id: frets.join(','),
+    label: frets.map(f => (f < 0 ? 'x' : f)).join(' '),
+  };
+}
+
+/* pick a diverse, useful shortlist */
+function shortlistVoicings(ch, opts = {}) {
+  // first ask for shapes with the root in the bass; only widen if that's too thin
+  let v = voicingsFor(ch, { ...opts, strictBass: true });
+  if (v.length < 6) {
+    const wider = voicingsFor(ch, { ...opts, strictBass: false });
+    const seen = new Set(v.map(x => x.id));
+    wider.forEach(x => { if (!seen.has(x.id)) v.push(x); });
+  }
+  if (!v.length) return [];
+
+  const top = Math.max(...v.map(x => x.quality));
+  v = v.filter(x => x.quality >= top - 13);
+  v.sort((a, b) => b.quality - a.quality || a.lowFret - b.lowFret);
+
+  // spread results along the neck, and keep both the compact and the full shape in each zone
+  const out = [], perSlot = new Map();
+  for (const x of v) {
+    const slot = Math.floor(x.lowFret / 2) + ':' + (x.notes.length >= 5 ? 'full' : 'part');
+    const n = perSlot.get(slot) || 0;
+    if (n >= 3) continue;
+    perSlot.set(slot, n + 1);
+    out.push(x);
+    if (out.length >= (opts.limit || 24)) break;
+  }
+  return out.sort((a, b) => b.quality - a.quality || a.lowFret - b.lowFret);
+}
+
+/* smoothest way through a progression (Viterbi again, chords as layers) */
+function voiceLead(chords, opts = {}) {
+  const pools = chords.map(c => shortlistVoicings(c, { limit: 30 }));
+  if (pools.some(p => !p.length)) return null;
+
+  const moveCost = (a, b) => {
+    let c = 0, common = 0;
+    for (let s = 0; s < STRINGS; s++) {
+      const x = a.frets[s], y = b.frets[s];
+      if (x >= 0 && y >= 0) { c += fretGap(x, y) * 1.0; if (x === y) common++; }
+      else if (x !== y) c += 0.9;
+    }
+    c += Math.abs(a.lowFret - b.lowFret) * 0.9;
+    c -= common * 0.55;
+    if (b.barre) c += 0.5;
+    c += (10 - b.ease) * 0.22;
+    c -= (Math.min(b.notes.length, 5) - 3) * 0.6;   // prefer substantial chords over fragments
+    return c;
+  };
+
+  let prev = pools[0].map(v => ({ v, cost: (10 - v.ease) * 0.4 + Math.abs(v.lowFret - (opts.startNear ?? 0)) * 0.3, back: -1 }));
+  const table = [prev];
+  for (let i = 1; i < pools.length; i++) {
+    const cur = pools[i].map(v => {
+      let best = Infinity, bj = -1;
+      for (let j = 0; j < prev.length; j++) {
+        const c = prev[j].cost + moveCost(prev[j].v, v);
+        if (c < best) { best = c; bj = j; }
+      }
+      return { v, cost: best, back: bj };
+    });
+    table.push(cur); prev = cur;
+  }
+  let ni = 0;
+  for (let i = 1; i < prev.length; i++) if (prev[i].cost < prev[ni].cost) ni = i;
+  const seq = [];
+  for (let li = table.length - 1; li >= 0; li--) { seq.unshift(table[li][ni].v); ni = table[li][ni].back; }
+
+  const links = [];
+  for (let i = 1; i < seq.length; i++) {
+    let moved = 0, held = 0;
+    for (let s = 0; s < STRINGS; s++) {
+      const x = seq[i - 1].frets[s], y = seq[i].frets[s];
+      if (x >= 0 && y >= 0) { if (x === y) held++; else moved += Math.abs(x - y); }
+    }
+    links.push({ moved, held, shift: Math.abs(seq[i - 1].lowFret - seq[i].lowFret) });
+  }
+  return { seq, links };
+}
+
+/* =========================================================================
+   CHORD GRAVITY — which chords sit near this one
+   ========================================================================= */
+const GRAVITY_QUALITIES = ['maj','min','7','maj7','m7','m7b5','dim7','sus4','6','m6','9','m9','maj9','7s9','aug'];
+
+function gravityField(ch, limit = 15) {
+  const home = chordPcs(ch);
+  const out = [];
+  for (let pc = 0; pc < 12; pc++) {
+    for (const q of GRAVITY_QUALITIES) {
+      if (pc === ch.pc && q === ch.q) continue;
+      const cand = { pc, q, bass: null, spec: CHORDS[q], name: noteName(pc, ch.flats) + CHORDS[q].label };
+      const set = chordPcs(cand);
+      let shared = 0;
+      set.forEach(x => { if (home.has(x)) shared++; });
+      const union = new Set([...home, ...set]).size;
+      let affinity = shared / union;                              // tone overlap
+      const rootMove = Math.min((pc - ch.pc + 12) % 12, (ch.pc - pc + 12) % 12);
+      if (rootMove === 5 || rootMove === 7) affinity += 0.16;     // circle of fifths pull
+      if (rootMove === 2) affinity += 0.05;
+      if (rootMove === 1) affinity -= 0.05;
+      if (rootMove === 0) affinity -= 0.28;   // same root is a recolour, not a move
+      const inKey = [...set].every(x => [0,2,4,5,7,9,11].includes(((x - ch.pc) % 12 + 12) % 12));
+      if (inKey) affinity += 0.18;            // chords built from the same seven notes
+      const isDom = ['7','9','7s9','7b9','7s5','7b5'].includes(q);
+      if (isDom && ((pc - ch.pc + 12) % 12) === 7) affinity += 0.14;   // the V pulling home
+      if (shared === 0) affinity -= 0.1;
+      cand.affinity = affinity; cand.shared = shared; cand.rootMove = rootMove;
+      out.push(cand);
+    }
+  }
+  out.sort((a, b) => b.affinity - a.affinity);
+  // at most two flavours of any one root, so the map shows movement not variations
+  const perRoot = new Map(), keep = [];
+  for (const c of out) {
+    const n = perRoot.get(c.pc) || 0;
+    if (n >= 2) continue;
+    perRoot.set(c.pc, n + 1);
+    keep.push(c);
+    if (keep.length >= limit) break;
+  }
+  return keep;
+}
+/* =========================================================================
+   AUDIO — plucked string via Karplus-Strong, rendered into a buffer
+   ========================================================================= */
+const Audio_ = {
+  ctx: null, cache: new Map(), on: true, master: null,
+  init() {
+    if (this.ctx) return;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) { this.on = false; return; }
+    this.ctx = new AC();
+    this.master = this.ctx.createGain();
+    this.master.gain.value = 0.5;
+    const comp = this.ctx.createDynamicsCompressor();
+    this.master.connect(comp); comp.connect(this.ctx.destination);
+  },
+  buffer(midi) {
+    const k = String(midi);
+    if (this.cache.has(k)) return this.cache.get(k);
+    const ctx = this.ctx, sr = ctx.sampleRate, dur = 2.4;
+    const n = Math.round(sr * dur);
+    const buf = ctx.createBuffer(1, n, sr);
+    const out = buf.getChannelData(0);
+    const N = Math.max(2, Math.round(sr / freqOf(midi)));
+    const line = new Float32Array(N);
+    // pick-shaped noise burst, low-passed so it isn't fizzy
+    let acc = 0;
+    for (let i = 0; i < N; i++) { acc = 0.6 * acc + 0.4 * (Math.random() * 2 - 1); line[i] = acc; }
+    const damp = 0.9965 - Math.min(0.004, midi / 24000);
+    let idx = 0;
+    for (let i = 0; i < n; i++) {
+      const cur = line[idx], nxt = line[(idx + 1) % N];
+      out[i] = cur;
+      line[idx] = (cur + nxt) * 0.5 * damp;
+      idx = (idx + 1) % N;
+    }
+    // tail fade so nothing clicks
+    const fade = Math.round(sr * 0.25);
+    for (let i = 0; i < fade; i++) out[n - fade + i] *= 1 - i / fade;
+    this.cache.set(k, buf);
+    return buf;
+  },
+  pluck(midi, when = 0, gain = 0.6) {
+    if (!this.on) return;
+    this.init();
+    if (!this.ctx) return;
+    if (this.ctx.state === 'suspended') this.ctx.resume();
+    const t = this.ctx.currentTime + when;
+    const src = this.ctx.createBufferSource();
+    src.buffer = this.buffer(midi);
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(gain, t);
+    const lp = this.ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.setValueAtTime(clamp(freqOf(midi) * 7, 900, 8000), t);
+    src.connect(lp); lp.connect(g); g.connect(this.master);
+    src.start(t); src.stop(t + 2.4);
+  },
+  strum(midis, spread = 0.028) {
+    midis.forEach((m, i) => this.pluck(m, i * spread, 0.42));
+  }
+};
+
+/* =========================================================================
+   FRETBOARD GEOMETRY — real scale-length spacing, so frets narrow correctly
+   ========================================================================= */
+const VB_W = 1180, VB_H = 306;
+const NUT_X = 96, BOARD_R = 1156, OPEN_X = 58;
+const TOP_Y = 54, BOT_Y = 238;
+const SCALE_L = (BOARD_R - NUT_X) / (1 - Math.pow(2, -FRETS / 12));
+
+const fretX  = n => NUT_X + SCALE_L * (1 - Math.pow(2, -n / 12));
+const noteX  = f => (f === 0 ? OPEN_X : (fretX(f - 1) + fretX(f)) / 2);
+const rowOf  = s => 5 - s;                       // low E drawn at the bottom
+function taper(x) { return 0.9 + 0.1 * clamp((x - NUT_X) / (BOARD_R - NUT_X), 0, 1); }
+function stringY(s, x) {
+  const gap = (BOT_Y - TOP_Y) / 5, cy = (TOP_Y + BOT_Y) / 2;
+  return cy + (rowOf(s) - 2.5) * gap * taper(x === undefined ? BOARD_R : x);
+}
+function nodeXY(s, f) { const x = noteX(f); return { x, y: stringY(s, f === 0 ? NUT_X : x) }; }
+
+const SVGNS = 'http://www.w3.org/2000/svg';
+function el(tag, attrs = {}, parent) {
+  const e = document.createElementNS(SVGNS, tag);
+  for (const k in attrs) if (attrs[k] !== undefined && attrs[k] !== null) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+
+const board = document.getElementById('board');
+board.setAttribute('viewBox', `0 0 ${VB_W} ${VB_H}`);
+board.setAttribute('role', 'img');
+
+let gDefs, gWood, gFrets, gStrings, gRoute, gNodes, gOverlay;
+
+function buildBoard() {
+  board.innerHTML = '';
+  gDefs = el('defs', {}, board);
+
+  const wood = el('linearGradient', { id: 'wood', x1: 0, y1: 0, x2: 0, y2: 1 }, gDefs);
+  el('stop', { offset: 0, 'stop-color': '#4a3628' }, wood);
+  el('stop', { offset: .42, 'stop-color': 'var(--board-a)' }, wood);
+  el('stop', { offset: 1, 'stop-color': 'var(--board-b)' }, wood);
+
+  const wire = el('linearGradient', { id: 'wire', x1: 0, y1: 0, x2: 0, y2: 1 }, gDefs);
+  el('stop', { offset: 0, 'stop-color': '#6d7378' }, wire);
+  el('stop', { offset: .35, 'stop-color': '#e8eef1' }, wire);
+  el('stop', { offset: .7, 'stop-color': '#9aa4aa' }, wire);
+  el('stop', { offset: 1, 'stop-color': '#4c5257' }, wire);
+
+  const strGrad = el('linearGradient', { id: 'strg', x1: 0, y1: 0, x2: 0, y2: 1 }, gDefs);
+  el('stop', { offset: 0, 'stop-color': '#8b939a' }, strGrad);
+  el('stop', { offset: .4, 'stop-color': '#dfe6ea' }, strGrad);
+  el('stop', { offset: 1, 'stop-color': '#6a7278' }, strGrad);
+
+  const glow = el('filter', { id: 'glow', x: '-60%', y: '-60%', width: '220%', height: '220%' }, gDefs);
+  el('feGaussianBlur', { stdDeviation: 5, result: 'b' }, glow);
+  const gm = el('feMerge', {}, glow);
+  el('feMergeNode', { in: 'b' }, gm);
+  el('feMergeNode', { in: 'SourceGraphic' }, gm);
+
+  gWood = el('g', {}, board);
+  gFrets = el('g', {}, board);
+  gStrings = el('g', {}, board);
+  gRoute = el('g', {}, board);
+  gNodes = el('g', {}, board);
+  gOverlay = el('g', {}, board);
+
+  // --- fretboard slab, tapered like a real neck
+  const yTopN = stringY(5, NUT_X) - 15, yBotN = stringY(0, NUT_X) + 15;
+  const yTopB = stringY(5, BOARD_R) - 15, yBotB = stringY(0, BOARD_R) + 15;
+  el('path', {
+    d: `M${NUT_X - 8} ${yTopN} L${BOARD_R + 6} ${yTopB} L${BOARD_R + 6} ${yBotB} L${NUT_X - 8} ${yBotN} Z`,
+    fill: 'url(#wood)'
+  }, gWood);
+
+  // grain
+  for (let i = 0; i < 26; i++) {
+    const t = i / 25, y1 = yTopN + (yBotN - yTopN) * t, y2 = yTopB + (yBotB - yTopB) * (t + (Math.random() - .5) * .04);
+    el('path', {
+      d: `M${NUT_X - 8} ${y1} C 400 ${y1 + (Math.random() - .5) * 9}, 800 ${y2 + (Math.random() - .5) * 9}, ${BOARD_R + 6} ${y2}`,
+      stroke: '#000', 'stroke-opacity': .07 + Math.random() * .07, 'stroke-width': .8, fill: 'none'
+    }, gWood);
+  }
+
+  // --- inlays
+  const dots = { 3: 1, 5: 1, 7: 1, 9: 1, 12: 2, 15: 1 };
+  for (const f in dots) {
+    const fn = +f; if (fn > FRETS) continue;
+    const x = noteX(fn), cy = (stringY(5, x) + stringY(0, x)) / 2;
+    const spread = (stringY(0, x) - stringY(5, x)) / 4.6;
+    const ys = dots[f] === 2 ? [cy - spread, cy + spread] : [cy];
+    ys.forEach(y => {
+      el('circle', { cx: x, cy: y, r: 7.5, fill: '#0b0906', opacity: .5 }, gWood);
+      el('circle', { cx: x, cy: y - .8, r: 6.6, fill: '#d8d2c4', opacity: .2 }, gWood);
+      el('circle', { cx: x, cy: y - 1.8, r: 4.4, fill: '#efe9da', opacity: .13 }, gWood);
+    });
+  }
+
+  // --- nut
+  el('rect', { x: NUT_X - 9, y: stringY(5, NUT_X) - 16, width: 9,
+    height: stringY(0, NUT_X) - stringY(5, NUT_X) + 32, fill: '#ded6c4', rx: 1.5 }, gFrets);
+  el('rect', { x: NUT_X - 3, y: stringY(5, NUT_X) - 16, width: 3,
+    height: stringY(0, NUT_X) - stringY(5, NUT_X) + 32, fill: '#000', opacity: .22 }, gFrets);
+
+  // --- fret wire
+  for (let f = 1; f <= FRETS; f++) {
+    const x = fretX(f);
+    el('line', { x1: x, y1: stringY(5, x) - 14, x2: x, y2: stringY(0, x) + 14,
+      stroke: 'url(#wire)', 'stroke-width': 3.2 }, gFrets);
+    el('line', { x1: x + 1.6, y1: stringY(5, x) - 14, x2: x + 1.6, y2: stringY(0, x) + 14,
+      stroke: '#000', 'stroke-opacity': .3, 'stroke-width': 1.4 }, gFrets);
+  }
+
+  // --- fret numbers
+  for (let f = 0; f <= FRETS; f++) {
+    const marked = [3, 5, 7, 9, 12, 15].includes(f);
+    el('text', {
+      x: noteX(f), y: BOT_Y + 46, 'text-anchor': 'middle',
+      fill: marked ? 'var(--nickel-dim)' : 'var(--muted-2)',
+      'font-family': 'var(--mono)', 'font-size': marked ? 12 : 10.5,
+      'font-weight': marked ? 700 : 400, opacity: f === 0 ? .8 : 1
+    }, gFrets).textContent = f === 0 ? 'open' : f;
+  }
+
+  // --- strings
+  for (let s = 0; s < STRINGS; s++) {
+    const w = 1.0 + (5 - s) * 0.62;
+    el('line', {
+      x1: NUT_X - 9, y1: stringY(s, NUT_X), x2: BOARD_R + 6, y2: stringY(s, BOARD_R),
+      stroke: 'url(#strg)', 'stroke-width': w, 'stroke-linecap': 'round',
+      class: 'str', 'data-s': s
+    }, gStrings);
+    el('line', {
+      x1: NUT_X - 9, y1: stringY(s, NUT_X) + w * 1.1, x2: BOARD_R + 6, y2: stringY(s, BOARD_R) + w * 1.1,
+      stroke: '#000', 'stroke-opacity': .35, 'stroke-width': w * .8
+    }, gStrings);
+    el('text', {
+      x: 22, y: stringY(s, NUT_X) + 4.5, 'text-anchor': 'middle',
+      fill: 'var(--muted-2)', 'font-family': 'var(--mono)', 'font-size': 12, 'font-weight': 500
+    }, gStrings).textContent = STR_NAME[s];
+  }
+}
+buildBoard();
+
+/* =========================================================================
+   BOARD STATE + PAINT
+   ========================================================================= */
+const View = {
+  nodes: new Map(),   // "s:f" -> {label, role, dim, order}
+  route: [],          // [{s,f}] draws the travel line
+  current: -1,
+  fog: false,
+  mutes: [],
+  barre: null,
+  onTap: null,
+};
+
+const ROLE_FILL = {
+  root:  'var(--brass)',
+  scale: 'var(--signal)',
+  chord: 'var(--brass)',
+  tone:  'var(--signal)',
+  ghost: '#4a545b',
+  fog:   '#333c42',
+};
+
+function paint() {
+  gRoute.innerHTML = ''; gNodes.innerHTML = ''; gOverlay.innerHTML = '';
+
+  // fog veil
+  if (View.fog) {
+    for (let s = 0; s < STRINGS; s++) for (let f = 0; f <= FRETS; f++) {
+      if (Progress.has(s, f) || View.nodes.has(key(s, f))) continue;
+      const { x, y } = nodeXY(s, f);
+      el('circle', { cx: x, cy: y, r: 9, fill: '#0d1114', opacity: .58 }, gRoute);
+    }
+  }
+
+  // barre bar
+  if (View.barre) {
+    const b = View.barre, x = noteX(b.fret);
+    const y1 = stringY(b.to, x), y2 = stringY(b.from, x);
+    el('rect', { x: x - 11, y: Math.min(y1, y2) - 11, width: 22, height: Math.abs(y2 - y1) + 22,
+      rx: 11, fill: 'var(--brass)', opacity: .18, stroke: 'var(--brass)', 'stroke-opacity': .5 }, gRoute);
+  }
+
+  // route line between consecutive nodes
+  if (View.route.length > 1) {
+    const pts = View.route.map(n => nodeXY(n.s, n.f));
+    let d = `M${pts[0].x} ${pts[0].y}`;
+    for (let i = 1; i < pts.length; i++) {
+      const a = pts[i - 1], b = pts[i];
+      const mx = (a.x + b.x) / 2;
+      d += ` C ${mx} ${a.y}, ${mx} ${b.y}, ${b.x} ${b.y}`;
+    }
+    el('path', { d, fill: 'none', stroke: '#000', 'stroke-opacity': .35, 'stroke-width': 6,
+      'stroke-linecap': 'round' }, gRoute);
+    const line = el('path', { d, fill: 'none', stroke: 'var(--brass)', 'stroke-width': 2.2,
+      'stroke-linecap': 'round', 'stroke-opacity': .85, filter: 'url(#glow)' }, gRoute);
+    const len = line.getTotalLength ? line.getTotalLength() : 2000;
+    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      line.setAttribute('stroke-dasharray', len);
+      line.setAttribute('stroke-dashoffset', len);
+      line.animate([{ strokeDashoffset: len }, { strokeDashoffset: 0 }],
+        { duration: Math.min(1400, 90 * View.route.length), easing: 'cubic-bezier(.22,.7,.3,1)', fill: 'forwards' });
+    }
+  }
+
+  // muted string x marks
+  View.mutes.forEach(s => {
+    const y = stringY(s, NUT_X);
+    el('text', { x: OPEN_X, y: y + 6, 'text-anchor': 'middle', fill: 'var(--muted-2)',
+      'font-family': 'var(--mono)', 'font-size': 16 }, gNodes).textContent = '×';
+  });
+
+  // notes
+  View.nodes.forEach((n, k) => {
+    const [s, f] = k.split(':').map(Number);
+    const { x, y } = nodeXY(s, f);
+    const g = el('g', { class: 'nd', style: 'cursor:pointer' }, gNodes);
+    const isCur = View.current >= 0 && View.route[View.current] &&
+                  View.route[View.current].s === s && View.route[View.current].f === f;
+    const r = n.role === 'ghost' ? 7 : isCur ? 14 : 11.5;
+    const fill = ROLE_FILL[n.role] || ROLE_FILL.scale;
+
+    if (isCur) el('circle', { cx: x, cy: y, r: 20, fill: 'var(--brass)', opacity: .22, filter: 'url(#glow)' }, g);
+    el('circle', { cx: x, cy: y + 1.5, r, fill: '#000', opacity: .45 }, g);
+    el('circle', {
+      cx: x, cy: y, r, fill,
+      opacity: n.role === 'ghost' ? .5 : n.dim ? .45 : 1,
+      stroke: isCur ? '#fff' : 'rgba(0,0,0,.45)', 'stroke-width': isCur ? 2 : 1
+    }, g);
+
+    if (n.label && n.role !== 'ghost') {
+      el('text', {
+        x, y: y + 4, 'text-anchor': 'middle',
+        fill: n.role === 'root' || n.role === 'chord' ? '#231703' : '#062b28',
+        'font-family': 'var(--mono)', 'font-size': n.label.length > 2 ? 9 : 10.5,
+        'font-weight': 700, 'pointer-events': 'none',
+        opacity: n.dim ? .7 : 1
+      }, g).textContent = n.label;
+    }
+    if (n.order !== undefined) {
+      el('text', {
+        x, y: y - r - 7, 'text-anchor': 'middle', fill: 'var(--brass)',
+        'font-family': 'var(--mono)', 'font-size': 9.5, 'font-weight': 700, 'pointer-events': 'none'
+      }, g).textContent = n.order;
+    }
+    g.addEventListener('click', () => {
+      Audio_.pluck(midiAt(s, f));
+      Progress.mark(s, f);
+      if (View.onTap) View.onTap(s, f);
+    });
+  });
+}
+
+/* ping a node while it plays */
+function ping(s, f) {
+  const { x, y } = nodeXY(s, f);
+  const c = el('circle', { cx: x, cy: y, r: 12, fill: 'none', stroke: 'var(--brass)', 'stroke-width': 2 }, gOverlay);
+  c.animate([{ r: 12, opacity: .9 }, { r: 34, opacity: 0 }], { duration: 520, easing: 'ease-out' })
+    .onfinish = () => c.remove();
+}
+
+/* =========================================================================
+   PROGRESS / FOG OF WAR
+   ========================================================================= */
+const Progress = {
+  set: new Set(),
+  missions: new Set(),
+  has(s, f) { return this.set.has(key(s, f)); },
+  mark(s, f) {
+    const k = key(s, f);
+    if (this.set.has(k)) return;
+    this.set.add(k); this.save(); this.updateChip();
+  },
+  markMany(list) {
+    let n = 0;
+    list.forEach(p => { const k = key(p.s, p.f); if (!this.set.has(k)) { this.set.add(k); n++; } });
+    if (n) { this.save(); this.updateChip(); }
+    return n;
+  },
+  pct() { return Math.round((this.set.size / (STRINGS * (FRETS + 1))) * 100); },
+  updateChip() {
+    const c = document.getElementById('fogChip');
+    if (c) c.innerHTML = 'Neck <b>' + this.pct() + '%</b> mapped';
+  },
+  async save() {
+    try { await window.storage.set('fretflow:progress',
+      JSON.stringify({ n: [...this.set], m: [...this.missions] })); } catch (e) {}
+  },
+  async load() {
+    try {
+      const r = await window.storage.get('fretflow:progress');
+      if (r && r.value) {
+        const d = JSON.parse(r.value);
+        (d.n || []).forEach(k => this.set.add(k));
+        (d.m || []).forEach(k => this.missions.add(k));
+      }
+    } catch (e) {}
+    this.updateChip();
+  },
+  reset() { this.set.clear(); this.missions.clear(); this.save(); this.updateChip(); }
+};
+
+/* =========================================================================
+   PLAYBACK
+   ========================================================================= */
+const Player = {
+  timer: null, idx: 0, seq: [], playing: false, onStep: null,
+  load(seq) { this.stop(); this.seq = seq; this.idx = 0; },
+  step() {
+    if (!this.seq.length) return;
+    const n = this.seq[this.idx % this.seq.length];
+    View.current = this.idx % this.seq.length;
+    if (Array.isArray(n)) { Audio_.strum(n.map(x => midiAt(x.s, x.f))); n.forEach(x => { ping(x.s, x.f); Progress.mark(x.s, x.f); }); }
+    else { Audio_.pluck(midiAt(n.s, n.f)); ping(n.s, n.f); Progress.mark(n.s, n.f); }
+    paint();
+    if (this.onStep) this.onStep(this.idx % this.seq.length);
+    this.idx++;
+  },
+  play(bpm) {
+    if (this.playing) { this.stop(); return; }
+    if (!this.seq.length) return;
+    Audio_.init();
+    this.playing = true;
+    document.getElementById('playBtn').textContent = 'Stop';
+    const ms = 60000 / bpm / (this.seq.length && Array.isArray(this.seq[0]) ? 0.5 : 2);
+    this.step();
+    this.timer = setInterval(() => {
+      if (this.idx >= this.seq.length) { this.stop(); View.current = -1; paint(); return; }
+      this.step();
+    }, ms);
+  },
+  stop() {
+    clearInterval(this.timer); this.timer = null; this.playing = false; this.idx = 0;
+    const b = document.getElementById('playBtn'); if (b) b.textContent = 'Play';
+  }
+};
+
+/* =========================================================================
+   SMALL RENDERERS
+   ========================================================================= */
+function chordDiagram(v, opts = {}) {
+  const W = 148, H = 166, L = 24, R = W - 16, T = 34, B = H - 18;
+  const fretted = v.frets.filter(f => f > 0);
+  const lo = fretted.length ? Math.min(...fretted) : 1;
+  const base = lo > 4 ? lo - 1 : 0;
+  const rows = 5, colW = (R - L) / 5, rowH = (B - T) / rows;
+  let s = `<svg viewBox="0 0 ${W} ${H}" xmlns="${SVGNS}">`;
+  s += `<rect x="${L}" y="${T}" width="${R - L}" height="${B - T}" fill="#0a0d10"/>`;
+  s += `<g stroke="#4d585f" stroke-width="1.1">`;
+  for (let i = 0; i <= rows; i++) s += `<line x1="${L}" y1="${T + i * rowH}" x2="${R}" y2="${T + i * rowH}"/>`;
+  for (let i = 0; i < 6; i++) s += `<line x1="${L + i * colW}" y1="${T}" x2="${L + i * colW}" y2="${B}"/>`;
+  s += `</g>`;
+  if (base === 0) s += `<rect x="${L - 1.5}" y="${T - 5}" width="${R - L + 3}" height="5" fill="#dcd4c2" rx="1"/>`;
+  else s += `<text x="${L - 8}" y="${T + rowH * .74}" text-anchor="end" fill="var(--nickel-dim)" font-family="var(--mono)" font-size="11">${base + 1}</text>`;
+
+  if (v.barre && v.barre.fret - base >= 1 && v.barre.fret - base <= rows) {
+    const y = T + (v.barre.fret - base - .5) * rowH;
+    const x1 = L + (5 - v.barre.to) * colW, x2 = L + (5 - v.barre.from) * colW;
+    s += `<rect x="${Math.min(x1,x2) - 8}" y="${y - 8}" width="${Math.abs(x2-x1) + 16}" height="16" rx="8" fill="var(--brass)"/>`;
+  }
+  v.frets.forEach((f, st) => {
+    const x = L + (5 - st) * colW;
+    if (f < 0) s += `<text x="${x}" y="${T - 8}" text-anchor="middle" fill="var(--muted)" font-family="var(--mono)" font-size="12">×</text>`;
+    else if (f === 0) s += `<circle cx="${x}" cy="${T - 12}" r="4.5" fill="none" stroke="var(--nickel)" stroke-width="1.5"/>`;
+    else {
+      const y = T + (f - base - .5) * rowH;
+      s += `<circle cx="${x}" cy="${y}" r="8.5" fill="var(--brass)"/>`;
+      if (opts.fingers && v.fingers[st] > 0)
+        s += `<text x="${x}" y="${y + 3.8}" text-anchor="middle" fill="#231703" font-family="var(--mono)" font-size="10" font-weight="700">${v.fingers[st]}</text>`;
+    }
+  });
+  s += `</svg>`;
+  return s;
+}
+
+function tabFor(route, opts = {}) {
+  const cols = route.map(n => (Array.isArray(n) ? n : [n]));
+  const lines = [];
+  for (let s = STRINGS - 1; s >= 0; s--) {
+    let line = STR_NAME[s].padEnd(2) + '|';
+    cols.forEach(col => {
+      const hit = col.find(n => n.s === s);
+      line += hit ? String(hit.f).padStart(2, '-') + '-' : '---';
+    });
+    lines.push(line + '|');
+  }
+  return lines.join('\n');
+}
+/* =========================================================================
+   APP STATE
+   ========================================================================= */
+const S = {
+  mode: 'explore',
+  root: 0,
+  scale: 'major',
+  labels: 'interval',      // name | interval | degree | none
+  grow: true,
+  octaves: 2,
+  direction: 'up',
+  startFret: 0,
+  profile: 'effort',
+  fogOn: false,
+  chordText: 'Cmaj9',
+  sortBy: 'ease',
+  noOpen: false,
+  voiceIdx: 0,
+  routes: {},
+  mission: null,
+  tempo: 96,
+};
+
+const $ = id => document.getElementById(id);
+const controls = $('controls'), readout = $('readout');
+const stageEyebrow = $('stageEyebrow'), stageTitle = $('stageTitle'), stageNote = $('stageNote'), legend = $('legend');
+
+function setLegend(items) {
+  legend.innerHTML = items.map(i => `<i class="k-${i[0]}">${i[1]}</i>`).join('');
+}
+function labelFor(pc, rootPc) {
+  const iv = ((pc - rootPc) % 12 + 12) % 12;
+  if (S.labels === 'name') return noteName(pc, [1,3,6,8,10].includes(rootPc));
+  if (S.labels === 'interval') return IVL[iv];
+  if (S.labels === 'degree') return DEG[iv];
+  return '';
+}
+function scalePcs(root, scaleKey) {
+  return SCALES[scaleKey].iv.map(i => (root + i) % 12);
+}
+function rootLabel() { return noteName(S.root, [1,3,6,8,10].includes(S.root)); }
+
+/* build the ascending pitch list for a scale run */
+function scaleRun(root, scaleKey, octaves, startFret, direction) {
+  const iv = SCALES[scaleKey].iv;
+  // lowest root at or above startFret on the two lowest strings
+  let base = null;
+  for (let s = 0; s <= 2 && base === null; s++) {
+    for (let f = Math.max(0, startFret); f <= FRETS; f++) {
+      if (pcAt(s, f) === root) { base = midiAt(s, f); break; }
+    }
+  }
+  if (base === null) base = 40 + ((root - 4 % 12) + 12) % 12;
+  const up = [];
+  for (let o = 0; o < octaves; o++) for (const i of iv) up.push(base + o * 12 + i);
+  up.push(base + octaves * 12);
+  const capped = up.filter(m => m <= OPEN[5] + FRETS);
+  if (direction === 'updown') return capped.concat(capped.slice(0, -1).reverse());
+  return capped;
+}
+
+/* =========================================================================
+   MODE: EXPLORE
+   ========================================================================= */
+function renderExplore() {
+  const sc = SCALES[S.scale], pcs = scalePcs(S.root, S.scale);
+  stageEyebrow.textContent = 'Explore · relationships, not boxes';
+  stageTitle.innerHTML = `<span>${rootLabel()}</span> ${sc.name.toLowerCase()}`;
+  stageNote.textContent = sc.blurb;
+  setLegend(S.fogOn ? [['root','root'],['scale','scale tone'],['fog','not yet played']]
+                    : [['root','root'],['scale','scale tone']]);
+
+  controls.innerHTML = `
+    <p class="panel-title">Scale</p>
+    <div class="field"><label>Root</label>
+      <select id="cRoot">${SHARP.map((n,i)=>`<option value="${i}" ${i===S.root?'selected':''}>${n}${FLAT[i]!==n?' / '+FLAT[i]:''}</option>`).join('')}</select>
+    </div>
+    <div class="field"><label>Scale</label>
+      <select id="cScale">${Object.entries(SCALES).map(([k,v])=>`<option value="${k}" ${k===S.scale?'selected':''}>${v.name}</option>`).join('')}</select>
+    </div>
+    <div class="field"><label>Show each note as</label>
+      <div class="seg" id="cLabels">
+        ${[['interval','intervals'],['name','note names'],['degree','degrees'],['none','nothing']]
+          .map(([k,l])=>`<button data-v="${k}" class="${S.labels===k?'on':''}">${l}</button>`).join('')}
+      </div>
+    </div>
+    <div class="field">
+      <label class="check"><input type="checkbox" id="cGrow" ${S.grow?'checked':''}><span>Grow from the root outward</span></label>
+      <label class="check"><input type="checkbox" id="cFog" ${S.fogOn?'checked':''}><span>Fog the notes I haven't played</span></label>
+    </div>
+    <div class="field"><button class="btn" id="cRegrow" style="width:100%">Replay the growth</button></div>
+    <p class="hint">Tap any note to hear it. Every note you play is permanently added to your map of the neck.</p>
+  `;
+
+  // seed = lowest root on the low E or A string
+  let seed = null;
+  for (let s = 0; s <= 1 && !seed; s++)
+    for (let f = 0; f <= FRETS; f++) if (pcAt(s, f) === S.root) { seed = { s, f }; break; }
+  if (!seed) seed = { s: 0, f: 0 };
+
+  const all = [];
+  for (let s = 0; s < STRINGS; s++) for (let f = 0; f <= FRETS; f++)
+    if (pcs.includes(pcAt(s, f))) all.push({ s, f });
+
+  // order notes by how far they are from the seed *through the hand*, not on screen
+  const dist = new Map([[key(seed.s, seed.f), 0]]);
+  const q = [seed];
+  const prof = PROFILES.effort;
+  while (q.length) {
+    q.sort((a, b) => dist.get(key(a.s, a.f)) - dist.get(key(b.s, b.f)));
+    const cur = q.shift(), dc = dist.get(key(cur.s, cur.f));
+    for (const n of all) {
+      const k = key(n.s, n.f);
+      if (Math.abs(n.s - cur.s) > 2 || fretGap(cur.f, n.f) > 5) continue;
+      const nd = dc + Math.max(0.4, stepCost(cur, n, prof, 1));
+      if (!dist.has(k) || nd < dist.get(k) - 0.01) { dist.set(k, nd); q.push(n); }
+    }
+  }
+  all.sort((a, b) => (dist.get(key(a.s, a.f)) ?? 999) - (dist.get(key(b.s, b.f)) ?? 999));
+
+  function show(count) {
+    View.nodes.clear(); View.route = []; View.current = -1; View.mutes = []; View.barre = null;
+    View.fog = S.fogOn;
+    all.slice(0, count).forEach(n => {
+      const pc = pcAt(n.s, n.f);
+      View.nodes.set(key(n.s, n.f), {
+        label: labelFor(pc, S.root),
+        role: pc === S.root ? 'root' : 'scale',
+        dim: S.fogOn && !Progress.has(n.s, n.f)
+      });
+    });
+    paint();
+  }
+
+  let growTimer = null;
+  function grow() {
+    clearInterval(growTimer);
+    if (!S.grow || window.matchMedia('(prefers-reduced-motion: reduce)').matches) { show(all.length); return; }
+    let i = 1; show(1);
+    growTimer = setInterval(() => { i += 1; show(i); if (i >= all.length) clearInterval(growTimer); }, 42);
+  }
+  grow();
+
+  View.onTap = null;
+  Player.load(all.slice().sort((a, b) => midiAt(a.s, a.f) - midiAt(b.s, b.f)).filter((n, i, arr) =>
+    i === 0 || midiAt(n.s, n.f) !== midiAt(arr[i-1].s, arr[i-1].f)));
+
+  // readout
+  const ivs = sc.iv.map(i => IVL[i]);
+  const names = sc.iv.map(i => noteName(S.root + i, [1,3,6,8,10].includes(S.root)));
+  const modes = Object.entries(SCALES).filter(([k, v]) =>
+    k !== S.scale && v.iv.length === sc.iv.length &&
+    [...Array(12).keys()].some(t => v.iv.map(x => (x + t) % 12).sort((a,b)=>a-b).join() === sc.iv.join())
+  );
+
+  readout.innerHTML = `
+    <div class="panel">
+      <p class="panel-title">What the shape is made of</p>
+      <div class="tab">${sc.iv.map((iv,i)=>
+        `<span class="lbl">${ivs[i].padEnd(3)}</span>`).join('')}
+${names.map(n=>n.padEnd(3)).join('')}</div>
+      <p class="hint">${sc.iv.length} notes, repeating every 12 frets. There are ${all.length} places to play them in the first ${FRETS} frets — the "five box shapes" are just five ways of slicing this one field.</p>
+    </div>
+    <div class="panel">
+      <p class="panel-title">Same notes, different centre</p>
+      <div class="rows">
+        ${modes.length ? modes.map(([k, v]) => {
+          const t = [...Array(12).keys()].find(t => v.iv.map(x => (x + t) % 12).sort((a,b)=>a-b).join() === sc.iv.join());
+          const newRoot = ((S.root + t) % 12 + 12) % 12;   // rotate forward, not back
+          return `<button class="row" data-mode-jump="${k}" data-root="${newRoot}">
+            <div><div class="row-name">${noteName(newRoot, false)} ${v.name.toLowerCase()}</div>
+            <div class="row-sub">${v.iv.map(i=>IVL[i]).join(' ')}</div></div>
+            <div class="row-scores"><span>identical notes</span></div></button>`;
+        }).join('') : '<div class="empty">This scale has no rotations that match another scale in the list.</div>'}
+      </div>
+      <p class="hint">These contain exactly the same pitches. Only the note you treat as home changes — which is why one fingering serves all of them.</p>
+    </div>`;
+
+  $('cRoot').onchange = e => { S.root = +e.target.value; render(); };
+  $('cScale').onchange = e => { S.scale = e.target.value; render(); };
+  $('cGrow').onchange = e => { S.grow = e.target.checked; grow(); };
+  $('cFog').onchange = e => { S.fogOn = e.target.checked; show(all.length); };
+  $('cRegrow').onclick = grow;
+  controls.querySelectorAll('#cLabels button').forEach(b => b.onclick = () => { S.labels = b.dataset.v; render(); });
+  readout.querySelectorAll('[data-mode-jump]').forEach(b => b.onclick = () => {
+    S.scale = b.dataset.modeJump; S.root = +b.dataset.root; render();
+  });
+}
+
+/* =========================================================================
+   MODE: NAVIGATE
+   ========================================================================= */
+function renderNavigate() {
+  const sc = SCALES[S.scale];
+  stageEyebrow.textContent = 'Navigate · least-effort routing';
+  stageTitle.innerHTML = `<span>${rootLabel()}</span> ${sc.name.toLowerCase()} <span style="color:var(--muted-2)">·</span> ${PROFILES[S.profile].name.toLowerCase()}`;
+  stageNote.textContent = PROFILES[S.profile].blurb;
+  setLegend([['path','route'],['root','root'],['scale','note in route']]);
+
+  const pitches = scaleRun(S.root, S.scale, S.octaves, S.startFret, S.direction);
+  const results = {};
+  Object.keys(PROFILES).forEach(k => {
+    const r = findPath(pitches, k, { startNear: S.startFret, noOpen: S.noOpen });
+    if (r) results[k] = r;
+  });
+  S.routes = results;
+  const R = results[S.profile];
+
+  controls.innerHTML = `
+    <p class="panel-title">Route request</p>
+    <div class="field"><label>Root</label>
+      <select id="nRoot">${SHARP.map((n,i)=>`<option value="${i}" ${i===S.root?'selected':''}>${n}${FLAT[i]!==n?' / '+FLAT[i]:''}</option>`).join('')}</select></div>
+    <div class="field"><label>Scale</label>
+      <select id="nScale">${Object.entries(SCALES).map(([k,v])=>`<option value="${k}" ${k===S.scale?'selected':''}>${v.name}</option>`).join('')}</select></div>
+    <div class="field"><label>Octaves</label>
+      <div class="seg" id="nOct">${[1,2,3].map(o=>`<button data-v="${o}" class="${S.octaves===o?'on':''}">${o}</button>`).join('')}</div></div>
+    <div class="field"><label>Direction</label>
+      <div class="seg" id="nDir">${[['up','up'],['updown','up and back']].map(([k,l])=>`<button data-v="${k}" class="${S.direction===k?'on':''}">${l}</button>`).join('')}</div></div>
+    <div class="field"><label>Start near fret ${S.startFret}</label>
+      <input type="range" id="nStart" min="0" max="12" value="${S.startFret}" style="width:100%"></div>
+    <div class="field"><label class="check"><input type="checkbox" id="nNoOpen" ${S.noOpen?'checked':''}><span>No open strings</span></label></div>
+    <p class="hint">Every route below plays the identical notes. Only the cost function changes.</p>
+  `;
+
+  if (!R) {
+    View.nodes.clear(); View.route = []; paint();
+    readout.innerHTML = `<div class="panel"><div class="empty">Those notes don't all fit on ${FRETS} frets. Try fewer octaves or a lower start.</div></div>`;
+    wireNavControls(); return;
+  }
+
+  View.nodes.clear(); View.mutes = []; View.barre = null; View.fog = false; View.current = -1;
+  View.route = R.path;
+  R.path.forEach((n, i) => {
+    const pc = pcAt(n.s, n.f);
+    View.nodes.set(key(n.s, n.f), {
+      label: labelFor(pc, S.root),
+      role: pc === S.root ? 'root' : 'scale'
+    });
+  });
+  paint();
+  Player.load(R.path);
+  Player.onStep = null;
+
+  const st = R.stats;
+  const metric = (label, val, cap, pct, cls) => `
+    <div class="metric">
+      <div class="metric-label">${label}</div>
+      <div class="metric-val">${val}</div>
+      ${cap ? `<div class="metric-cap">${cap}</div>` : ''}
+      ${pct !== undefined ? `<div class="bar ${cls||''}"><i style="width:${clamp(pct,0,100)}%"></i></div>` : ''}
+    </div>`;
+
+  readout.innerHTML = `
+    <div class="panel">
+      <p class="panel-title">Cost of this route</p>
+      <div class="readout-grid">
+        ${metric('Hand travel', st.travel + '<small> frets</small>',
+                 st.travel === 0 ? 'the hand never moves' : 'total arm movement', st.travel * 6, 'warm')}
+        ${metric('Position shifts', st.shifts,
+                 st.shifts === 0 ? 'one position throughout' : 'sits at fret ' + st.positions.join(', '),
+                 st.shifts * 20, st.shifts > 3 ? 'hot' : 'warm')}
+        ${metric('Widest reach', st.maxStretch + '<small> frets</small>',
+                 st.maxStretch >= 3 ? 'little finger stretches' : 'comfortable', st.maxStretch * 30, st.maxStretch >= 3 ? 'hot' : '')}
+        ${metric('String crossings', st.crossings,
+                 st.skips ? st.skips + ' of them skip a string' : 'all to a neighbour', st.crossings * 8)}
+        ${metric('Notes per string', st.avgRun, 'average run length', st.avgRun * 20)}
+        ${metric('Neck span', 'fret ' + st.lowFret + '–' + st.highFret, st.span + ' frets end to end', st.span * 8)}
+      </div>
+    </div>
+    <div class="panel">
+      <p class="panel-title">Tablature</p>
+      <div class="tab">${tabFor(R.path)}</div>
+    </div>
+    <div class="panel">
+      <p class="panel-title">Alternate routes · same notes</p>
+      <div class="rows">
+        ${Object.entries(results).map(([k, r]) => `
+          <button class="row ${k===S.profile?'on':''}" data-prof="${k}">
+            <div><div class="row-name">${PROFILES[k].name}<em>${r.stats.lowFret}–${r.stats.highFret}</em></div>
+              <div class="row-sub">${PROFILES[k].blurb}</div></div>
+            <div class="row-scores">
+              <span>hand <b>${r.stats.travel}</b></span>
+              <span>shifts <b>${r.stats.shifts}</b></span>
+              <span>reach <b>${r.stats.maxStretch}</b></span>
+            </div>
+          </button>`).join('')}
+      </div>
+    </div>`;
+
+  readout.querySelectorAll('[data-prof]').forEach(b => b.onclick = () => { S.profile = b.dataset.prof; render(); });
+  wireNavControls();
+
+  function wireNavControls() {
+    $('nRoot').onchange = e => { S.root = +e.target.value; render(); };
+    $('nScale').onchange = e => { S.scale = e.target.value; render(); };
+    $('nNoOpen').onchange = e => { S.noOpen = e.target.checked; render(); };
+    $('nStart').oninput = e => { S.startFret = +e.target.value; render(); };
+    controls.querySelectorAll('#nOct button').forEach(b => b.onclick = () => { S.octaves = +b.dataset.v; render(); });
+    controls.querySelectorAll('#nDir button').forEach(b => b.onclick = () => { S.direction = b.dataset.v; render(); });
+  }
+}
+
+/* =========================================================================
+   MODE: CHORDS
+   ========================================================================= */
+const SORTS = {
+  ease:    { label: 'easiest',        fn: (a,b) => b.ease - a.ease || a.span - b.span },
+  stretch: { label: 'least stretch',  fn: (a,b) => a.span - b.span || b.ease - a.ease },
+  bright:  { label: 'brightest',      fn: (a,b) => b.bright - a.bright },
+  dark:    { label: 'darkest',        fn: (a,b) => a.bright - b.bright },
+  low:     { label: 'lowest on neck', fn: (a,b) => a.lowFret - b.lowFret || b.ease - a.ease },
+  rich:    { label: 'most colour',    fn: (a,b) => b.rich - a.rich || b.ease - a.ease },
+};
+
+function renderChords() {
+  const parts = S.chordText.split(/[,>→|]+/).map(t => t.trim()).filter(Boolean);
+  const chords = parts.map(parseChord);
+  const bad = parts.filter((p, i) => !chords[i]);
+
+  stageEyebrow.textContent = chords.length > 1 ? 'Chords · voice leading' : 'Chords · voicing compiler';
+  setLegend([['root','root'],['chord','chord tone'],['mute','muted string']]);
+
+  controls.innerHTML = `
+    <p class="panel-title">Chord request</p>
+    <div class="field"><label>Chord or progression</label>
+      <input type="text" id="hInput" value="${S.chordText.replace(/"/g,'&quot;')}" spellcheck="false"></div>
+    <div class="field"><button class="btn primary" id="hGo" style="width:100%">Compile</button></div>
+    <div class="field"><label>Rank by</label>
+      <div class="seg brass" id="hSort">${Object.entries(SORTS).map(([k,v])=>
+        `<button data-v="${k}" class="${S.sortBy===k?'on':''}">${v.label}</button>`).join('')}</div></div>
+    <div class="field"><label class="check"><input type="checkbox" id="hNoOpen" ${S.noOpen?'checked':''}><span>No open strings</span></label></div>
+    <div class="field"><label>Try one of these</label>
+      <div class="seg" id="hEx">${['Cmaj9','Am7','G7#9','Dm7 > G7 > Cmaj7','F#m11','Ebmaj9#11','Bm7b5 > E7b9 > Am9']
+        .map(t=>`<button data-t="${t}">${t}</button>`).join('')}</div></div>
+    <p class="hint">Type any root plus a quality — <span class="mono">maj7, m9, 7#9, sus4, 6/9, m7b5, maj9#11</span>. Separate a progression with commas or arrows.</p>
+  `;
+  wireChordControls();
+
+  if (!chords.length || bad.length || chords.some(c => !c)) {
+    stageTitle.innerHTML = 'Unreadable chord';
+    stageNote.textContent = bad.length ? `Couldn't parse "${bad[0]}".` : 'Type a chord to compile it.';
+    View.nodes.clear(); View.route = []; View.mutes = []; View.barre = null; paint();
+    readout.innerHTML = `<div class="panel"><div class="empty">Start with a note letter, then the quality. Try <span class="mono">Cmaj9</span> or <span class="mono">F#m7b5</span>.</div></div>`;
+    return;
+  }
+
+  if (chords.length > 1) return renderProgression(chords);
+
+  const ch = chords[0];
+  const roles = chordRoleMap(ch);
+  let list = shortlistVoicings(ch, { noOpen: S.noOpen, limit: 40 });
+  list.sort(SORTS[S.sortBy].fn);
+  list = list.slice(0, 18);
+
+  stageTitle.innerHTML = `<span>${ch.name}</span>`;
+  stageNote.textContent = `${ch.spec.full} · ${ch.spec.iv.map(i => roles[(ch.pc + i) % 12] || IVL[i % 12]).join(' ')} · ${list.length} playable shapes found`;
+
+  if (!list.length) {
+    View.nodes.clear(); paint();
+    readout.innerHTML = `<div class="panel"><div class="empty">No shape of ${ch.name} fits under one hand within ${FRETS} frets${S.noOpen?' without open strings':''}.</div></div>`;
+    return;
+  }
+
+  S.voiceIdx = clamp(S.voiceIdx, 0, list.length - 1);
+  const v = list[S.voiceIdx];
+  showVoicing(v, ch, roles);
+  Player.load([v.notes]);
+
+  const grav = gravityField(ch, 15);
+
+  readout.innerHTML = `
+    <div class="panel">
+      <p class="panel-title">${list.length} shapes · ranked by ${SORTS[S.sortBy].label}</p>
+      <div class="mini-grid" id="hGrid">
+        ${list.map((x, i) => `
+          <div class="mini ${i===S.voiceIdx?'on':''}" data-i="${i}">
+            <div class="mini-name"><b>${x.frets.map(f=>f<0?'x':f).join(x.frets.some(f=>f>9)?'·':' ')}</b><span>${x.lowFret<=1&&x.opens?'open':'fret '+x.lowFret}</span></div>
+            ${chordDiagram(x, { fingers: true })}
+          </div>`).join('')}
+      </div>
+    </div>
+    <div class="panel">
+      <p class="panel-title">Selected shape</p>
+      <div class="readout-grid">
+        <div class="metric"><div class="metric-label">Left hand</div>
+          <div class="metric-val" style="font-size:17px">${v.barre ? 'Barre at ' + v.barre.fret : v.fingersUsed + ' finger' + (v.fingersUsed===1?'':'s')}</div>
+          <div class="metric-cap">ease ${v.ease}/10</div>
+          <div class="bar"><i style="width:${v.ease*10}%"></i></div></div>
+        <div class="metric"><div class="metric-label">Stretch</div>
+          <div class="metric-val">${v.span}<small> frets</small></div>
+          <div class="metric-cap">${v.span===0?'every finger on one fret':v.stretch>6?'demanding':'comfortable'}</div>
+          <div class="bar ${v.stretch>6?'hot':'warm'}"><i style="width:${v.stretch*10}%"></i></div></div>
+        <div class="metric"><div class="metric-label">Brightness</div>
+          <div class="metric-val">${v.bright}<small>/10</small></div>
+          <div class="metric-cap">${v.bright>6?'airy and open':v.bright>3?'mid register':'dark and close'}</div>
+          <div class="bar warm"><i style="width:${v.bright*10}%"></i></div></div>
+        <div class="metric"><div class="metric-label">Colour</div>
+          <div class="metric-val">${v.rich}<small>/10</small></div>
+          <div class="metric-cap">${v.notes.length} strings sounding</div>
+          <div class="bar"><i style="width:${v.rich*10}%"></i></div></div>
+      </div>
+      <div class="tab" style="margin-top:14px">${
+        v.notes.map(n => `<span class="lbl">${STR_NAME[n.s]}</span> fret ${String(n.f).padStart(2)}  ${noteName(n.pc, ch.flats).padEnd(2)}  ${(roles[n.pc]||'·')}`).join('\n')
+      }</div>
+    </div>
+    <div class="panel">
+      <p class="panel-title">Chord gravity · what sits near ${ch.name}</p>
+      <div class="gravity-wrap">${gravitySvg(ch, grav)}</div>
+      <p class="hint">Distance from centre is how little the two chords share. Clockwise is a fifth up, anticlockwise a fifth down. Click any chord to compile it.</p>
+    </div>`;
+
+  readout.querySelectorAll('#hGrid .mini').forEach(m => m.onclick = () => {
+    S.voiceIdx = +m.dataset.i;
+    const x = list[S.voiceIdx];
+    showVoicing(x, ch, roles);
+    Audio_.strum(x.notes.map(n => n.midi));
+    Player.load([x.notes]);
+    readout.querySelectorAll('#hGrid .mini').forEach(o => o.classList.toggle('on', o === m));
+    renderChords();
+  });
+  readout.querySelectorAll('[data-chord]').forEach(b => b.onclick = () => {
+    S.chordText = b.dataset.chord; S.voiceIdx = 0; render();
+  });
+}
+
+function showVoicing(v, ch, roles) {
+  View.nodes.clear(); View.route = []; View.current = -1; View.fog = false;
+  View.barre = v.barre;
+  View.mutes = v.frets.map((f, s) => f < 0 ? s : -1).filter(s => s >= 0);
+  v.notes.forEach(n => {
+    View.nodes.set(key(n.s, n.f), {
+      label: S.labels === 'name' ? noteName(n.pc, ch.flats) : (roles[n.pc] || '·'),
+      role: n.pc === ch.pc ? 'root' : 'chord',
+      dim: n.pc !== ch.pc
+    });
+  });
+  paint();
+}
+
+function renderProgression(chords) {
+  const res = voiceLead(chords, { startNear: 0 });
+  stageTitle.innerHTML = chords.map(c => `<span>${c.name}</span>`).join(' <span style="color:var(--muted-2)">→</span> ');
+
+  if (!res) {
+    stageNote.textContent = 'One of those chords has no playable shape.';
+    readout.innerHTML = `<div class="panel"><div class="empty">Couldn't find shapes for every chord. Try simpler qualities.</div></div>`;
+    return;
+  }
+  const totalMove = res.links.reduce((a, l) => a + l.moved, 0);
+  const totalHeld = res.links.reduce((a, l) => a + l.held, 0);
+  stageNote.textContent = `Smoothest path found: ${totalMove} frets of finger movement across ${chords.length} chords, with ${totalHeld} fingers staying put.`;
+
+  let idx = 0;
+  const show = i => {
+    idx = i;
+    showVoicing(res.seq[i], chords[i], chordRoleMap(chords[i]));
+    readout.querySelectorAll('#pGrid .mini').forEach((m, j) => m.classList.toggle('on', j === i));
+  };
+  show(0);
+  Player.load(res.seq.map(v => v.notes));
+  Player.onStep = i => readout.querySelectorAll('#pGrid .mini').forEach((m, j) => m.classList.toggle('on', j === i));
+
+  readout.innerHTML = `
+    <div class="panel">
+      <p class="panel-title">Voice-led path</p>
+      <div class="mini-grid" id="pGrid">
+        ${res.seq.map((v, i) => `
+          <div class="mini ${i===0?'on':''}" data-i="${i}">
+            <div class="mini-name"><b>${chords[i].name}</b><span>${v.frets.map(f=>f<0?'x':f).join(v.frets.some(f=>f>9)?'·':'')}</span></div>
+            ${chordDiagram(v, { fingers: true })}
+          </div>`).join('')}
+      </div>
+    </div>
+    <div class="panel">
+      <p class="panel-title">Cost of each change</p>
+      <div class="rows">
+        ${res.links.map((l, i) => `
+          <div class="row" style="cursor:default">
+            <div><div class="row-name">${chords[i].name} → ${chords[i+1].name}</div>
+              <div class="row-sub">${l.held ? l.held + ' finger' + (l.held===1?'':'s') + ' never leave the string' : 'complete hand change'}${l.shift ? ' · hand slides ' + l.shift + ' fret' + (l.shift===1?'':'s') : ' · no position change'}</div></div>
+            <div class="row-scores"><span>movement <b>${l.moved}</b></span></div>
+          </div>`).join('')}
+      </div>
+      <p class="hint">Movement counts every fret a fretting finger has to travel. Lower is smoother, and usually sounds more connected.</p>
+    </div>
+    <div class="panel">
+      <p class="panel-title">Chord gravity · around ${chords[chords.length-1].name}</p>
+      <div class="gravity-wrap">${gravitySvg(chords[chords.length-1], gravityField(chords[chords.length-1], 15))}</div>
+      <p class="hint">A likely next chord. Click one to append it to the progression.</p>
+    </div>`;
+
+  readout.querySelectorAll('#pGrid .mini').forEach(m => m.onclick = () => {
+    show(+m.dataset.i);
+    Audio_.strum(res.seq[+m.dataset.i].notes.map(n => n.midi));
+  });
+  readout.querySelectorAll('[data-chord]').forEach(b => b.onclick = () => {
+    S.chordText = S.chordText + ' > ' + b.dataset.chord; render();
+  });
+}
+
+function gravitySvg(ch, field) {
+  const W = 660, H = 440, cx = W / 2, cy = H / 2;
+  const maxA = Math.max(...field.map(f => f.affinity), 0.01);
+  let s = `<svg viewBox="0 0 ${W} ${H}" xmlns="${SVGNS}" id="gravity">`;
+  [0.34, 0.62, 0.9].forEach(r => {
+    s += `<ellipse cx="${cx}" cy="${cy}" rx="${r*(W/2-30)}" ry="${r*(H/2-26)}" fill="none" stroke="var(--line)" stroke-dasharray="2 5"/>`;
+  });
+  const perRoot = new Map();
+  field.forEach(f => {
+    const k = ((f.pc - ch.pc) * 7 % 12 + 12) % 12;          // steps around the circle of fifths
+    const kk = k > 6 ? k - 12 : k;
+    const nth = perRoot.get(f.pc) || 0; perRoot.set(f.pc, nth + 1);
+    const fan = nth === 0 ? 0 : (nth % 2 ? 1 : -1) * 0.068 * Math.ceil(nth / 2);
+    const ang = (kk / 12 + fan) * Math.PI * 2 - Math.PI / 2;
+    const t = 1 - clamp(f.affinity / maxA, 0, 1);
+    const rr = 0.30 + t * 0.60 + nth * 0.13;                 // and push the second one further out
+    const x = cx + Math.cos(ang) * rr * (W / 2 - 34);
+    const y = cy + Math.sin(ang) * rr * (H / 2 - 30);
+    const op = clamp(0.3 + (f.affinity / maxA) * 0.7, 0.22, 1);
+    const rad = 15 + (f.affinity / maxA) * 9;
+    s += `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="var(--signal)" stroke-opacity="${op*0.22}" stroke-width="1"/>`;
+    s += `<g class="gnode" data-chord="${f.name}">
+      <circle cx="${x}" cy="${y}" r="${rad}" fill="var(--panel-2)" stroke="var(--signal)" stroke-opacity="${op}" stroke-width="1.4"/>
+      <text x="${x}" y="${y+4}" text-anchor="middle" fill="var(--text)" opacity="${op}" font-family="var(--mono)" font-size="11">${f.name}</text>
+      <title>${f.shared} shared notes</title></g>`;
+  });
+  s += `<circle cx="${cx}" cy="${cy}" r="30" fill="var(--brass)"/>
+        <text x="${cx}" y="${cy+5}" text-anchor="middle" fill="#231703" font-family="var(--mono)" font-size="13" font-weight="700">${ch.name}</text>`;
+  s += `</svg>`;
+  return s;
+}
+
+function wireChordControls() {
+  const go = () => { S.chordText = $('hInput').value; S.voiceIdx = 0; render(); };
+  $('hGo').onclick = go;
+  $('hInput').onkeydown = e => { if (e.key === 'Enter') go(); };
+  $('hNoOpen').onchange = e => { S.noOpen = e.target.checked; S.voiceIdx = 0; render(); };
+  controls.querySelectorAll('#hSort button').forEach(b => b.onclick = () => { S.sortBy = b.dataset.v; S.voiceIdx = 0; render(); });
+  controls.querySelectorAll('#hEx button').forEach(b => b.onclick = () => { S.chordText = b.dataset.t; S.voiceIdx = 0; render(); });
+}
+
+/* =========================================================================
+   MODE: MISSIONS
+   ========================================================================= */
+const MISSIONS = [
+  {
+    id: 'thirds',
+    goal: 'Climb to the 12th fret in thirds',
+    why: 'Thirds break the habit of playing scales as straight lines, and they are the raw material of every arpeggio.',
+    tags: ['intervals', 'full neck'],
+    build(root, scale) {
+      const iv = SCALES[scale].iv, base = 40 + ((root - 4) % 12 + 12) % 12;
+      const deg = [];
+      for (let o = 0; o < 3; o++) for (const i of iv) deg.push(base + o * 12 + i);
+      const seq = [];
+      for (let i = 0; i + 2 < deg.length && deg[i] <= base + 24; i++) { seq.push(deg[i], deg[i + 2]); }
+      return { pitches: seq.filter(m => m <= OPEN[5] + FRETS), profile: 'effort', opts: {} };
+    },
+    check: st => ({ ok: st.highFret >= 12, msg: st.highFret >= 12 ? 'Reached fret ' + st.highFret : 'Only got to fret ' + st.highFret })
+  },
+  {
+    id: 'twofret',
+    goal: 'Never move your hand more than two frets',
+    why: 'Forces you to reach for notes you would normally shift to, which is how you learn where a position really ends.',
+    tags: ['no shifting'],
+    build(root, scale, startFret) {
+      return { pitches: scaleRun(root, scale, 2, startFret, 'updown'), profile: 'anchor',
+               opts: { startNear: startFret, minFret: Math.max(1, startFret), maxFret: startFret + 5, noOpen: true } };
+    },
+    check: st => ({ ok: st.shifts === 0 && st.span <= 5, msg: st.shifts === 0 ? 'Zero shifts, ' + st.span + '-fret span' : st.shifts + ' shifts crept in' })
+  },
+  {
+    id: 'onestring',
+    goal: 'Two octaves on a single string',
+    why: 'The neck is six overlapping one-string instruments. Playing lengthwise makes intervals visible as distance.',
+    tags: ['one string', 'legato'],
+    build(root, scale, startFret, str) {
+      const st = str ?? 2;
+      // the run has to begin at a root this string can actually reach
+      let base = null;
+      for (let f = 0; f <= FRETS && base === null; f++) if (pcAt(st, f) === root) base = midiAt(st, f);
+      if (base === null) return { pitches: [], profile: 'linear', opts: {} };
+      const iv = SCALES[scale].iv, seq = [];
+      for (let o = 0; o < 2; o++) for (const i of iv) seq.push(base + o * 12 + i);
+      seq.push(base + 24);
+      return { pitches: seq.filter(m => m <= midiAt(st, FRETS)), profile: 'linear', opts: { strings: [st] } };
+    },
+    check: st => ({ ok: st.crossings === 0, msg: st.crossings === 0 ? 'Stayed on one string the whole way' : st.crossings + ' string changes' })
+  },
+  {
+    id: 'everystring',
+    goal: 'Play the root on every single string',
+    why: 'Six identical pitches in six places. This is the exercise that makes octave shapes stick.',
+    tags: ['octaves', 'all strings'],
+    build(root) {
+      const seq = [];
+      for (let s = 0; s < STRINGS; s++) {
+        for (let f = 0; f <= FRETS; f++) if (pcAt(s, f) === root) { seq.push(midiAt(s, f)); break; }
+      }
+      return { pitches: seq, profile: 'effort', opts: {} };
+    },
+    check: st => ({ ok: st.notes >= 6, msg: st.notes + ' positions found' })
+  },
+  {
+    id: 'threefret',
+    goal: 'Everything inside a three-fret window',
+    why: 'A cramped box teaches you which notes are actually adjacent, rather than which ones look adjacent in a diagram.',
+    tags: ['3 frets', 'no open strings'],
+    build(root, scale, startFret) {
+      const pcs = scalePcs(root, scale), lo = Math.max(1, startFret), hi = lo + 2;
+      const notes = [];
+      for (let s = 0; s < STRINGS; s++) for (let f = lo; f <= hi; f++)
+        if (pcs.includes(pcAt(s, f))) notes.push(midiAt(s, f));
+      notes.sort((a, b) => a - b);
+      return { pitches: [...new Set(notes)], profile: 'effort', opts: { minFret: lo, maxFret: hi, noOpen: true } };
+    },
+    check: st => ({ ok: st.span <= 2, msg: st.span <= 2 ? 'Held a ' + (st.span + 1) + '-fret window' : 'Window grew to ' + (st.span + 1) + ' frets' })
+  },
+  {
+    id: 'noindex',
+    goal: 'Play it without your index finger',
+    why: 'Your index does most of the work by default. Removing it reveals how weak the other three have quietly stayed.',
+    tags: ['fingers 2·3·4'],
+    build(root, scale, startFret) {
+      const lo = Math.max(2, startFret + 1);
+      return { pitches: scaleRun(root, scale, 2, lo, 'up'), profile: 'anchor',
+               opts: { minFret: lo, maxFret: lo + 3, noOpen: true, startNear: lo } };
+    },
+    check: st => ({ ok: st.opens === 0 && st.span <= 3, msg: st.span <= 3 ? 'Three fingers covered a ' + (st.span + 1) + '-fret span' : 'Needed ' + (st.span + 1) + ' frets' })
+  },
+  {
+    id: 'skips',
+    goal: 'Arpeggio using only string skips',
+    why: 'Skipping strings breaks the sweeping motion and forces the picking hand to aim rather than drift.',
+    tags: ['string skipping', 'arpeggio'],
+    build(root, scale) {
+      const iv = SCALES[scale].iv;
+      const tri = [iv[0], iv[2] ?? 4, iv[4] ?? 7, iv[6] ?? 11].filter(x => x !== undefined);
+      const base = 40 + ((root - 4) % 12 + 12) % 12;
+      const seq = [];
+      for (let o = 0; o < 2; o++) for (const i of tri) seq.push(base + o * 12 + i);
+      return { pitches: seq.filter(m => m <= OPEN[5] + FRETS), profile: 'effort', opts: { strings: [0, 2, 4] } };
+    },
+    check: st => ({ ok: st.skips >= 1, msg: st.skips + ' string skips in the route' })
+  },
+  {
+    id: 'descend',
+    goal: 'Descend two octaves in fourths',
+    why: 'Fourths are how the guitar is tuned, so this run lays flat under the hand once you find the shape.',
+    tags: ['intervals', 'descending'],
+    build(root, scale) {
+      const iv = SCALES[scale].iv, base = 40 + ((root - 4) % 12 + 12) % 12;
+      const deg = [];
+      for (let o = 0; o < 3; o++) for (const i of iv) deg.push(base + o * 12 + i);
+      const seq = [];
+      for (let i = deg.length - 1; i - 3 >= 0; i--) { seq.push(deg[i], deg[i - 3]); }
+      return { pitches: seq.filter(m => m <= OPEN[5] + FRETS && m >= 40), profile: 'effort', opts: {} };
+    },
+    check: st => ({ ok: st.notes >= 8, msg: st.notes + ' notes, ' + st.travel + ' frets of travel' })
+  },
+];
+
+function renderMissions() {
+  stageEyebrow.textContent = 'Missions · constrained practice';
+  const m = MISSIONS.find(x => x.id === S.mission) || null;
+  const str = S.missionString ?? 2;
+
+  controls.innerHTML = `
+    <p class="panel-title">Mission setup</p>
+    <div class="field"><label>Key</label>
+      <select id="mRoot">${SHARP.map((n,i)=>`<option value="${i}" ${i===S.root?'selected':''}>${n}${FLAT[i]!==n?' / '+FLAT[i]:''}</option>`).join('')}</select></div>
+    <div class="field"><label>Scale</label>
+      <select id="mScale">${Object.entries(SCALES).map(([k,v])=>`<option value="${k}" ${k===S.scale?'selected':''}>${v.name}</option>`).join('')}</select></div>
+    <div class="field"><label>Anchor fret ${S.startFret}</label>
+      <input type="range" id="mStart" min="0" max="10" value="${S.startFret}" style="width:100%"></div>
+    <div class="field"><label>String for one-string missions</label>
+      <div class="seg" id="mStr">${STR_NAME.map((n,i)=>`<button data-v="${i}" class="${str===i?'on':''}">${n}</button>`).join('')}</div></div>
+    <div class="field"><label class="check"><input type="checkbox" id="mFog" ${S.fogOn?'checked':''}><span>Show the fog of war</span></label></div>
+    <div class="field"><button class="btn ghost sm" id="mReset" style="width:100%">Reset my map of the neck</button></div>
+    <p class="hint">Each mission is a constraint, not a song. The route shown is one legal answer — play it, then find your own.</p>
+  `;
+
+  let solution = null, verdict = null;
+  if (m) {
+    const spec = m.build(S.root, S.scale, S.startFret, str);
+    solution = spec.pitches.length ? findPath(spec.pitches, spec.profile, spec.opts) : null;
+    if (solution) verdict = m.check(solution.stats);
+  }
+
+  if (m && solution) {
+    stageTitle.innerHTML = m.goal;
+    stageNote.textContent = m.why;
+    setLegend([['path','route'],['root','root'],['fog','unmapped']]);
+    View.nodes.clear(); View.mutes = []; View.barre = null; View.current = -1;
+    View.fog = S.fogOn;
+    View.route = solution.path;
+    solution.path.forEach(n => {
+      const pc = pcAt(n.s, n.f);
+      View.nodes.set(key(n.s, n.f), { label: labelFor(pc, S.root), role: pc === S.root ? 'root' : 'scale' });
+    });
+    paint();
+    Player.load(solution.path);
+  } else {
+    stageTitle.innerHTML = m ? 'No legal route' : 'Pick a mission';
+    stageNote.textContent = m ? 'Those constraints leave nothing playable in this key. Move the anchor fret or change scale.'
+                              : 'Constraints force you to find notes you would otherwise never reach for.';
+    setLegend([['fog','unmapped'],['scale','mapped']]);
+    View.nodes.clear(); View.route = []; View.mutes = []; View.barre = null;
+    View.fog = true;
+    for (let s = 0; s < STRINGS; s++) for (let f = 0; f <= FRETS; f++)
+      if (Progress.has(s, f)) View.nodes.set(key(s, f), { label: '', role: 'ghost' });
+    paint();
+    Player.load([]);
+  }
+
+  const done = id => Progress.missions.has(id);
+
+  readout.innerHTML = `
+    ${m && solution ? `
+    <div class="panel">
+      <p class="panel-title">One legal answer</p>
+      <div class="readout-grid">
+        <div class="metric"><div class="metric-label">Verdict</div>
+          <div class="metric-val" style="font-size:16px;color:${verdict.ok?'var(--signal)':'var(--rose)'}">${verdict.msg}</div></div>
+        <div class="metric"><div class="metric-label">Hand travel</div>
+          <div class="metric-val">${solution.stats.travel}<small> frets</small></div>
+          <div class="metric-cap">${solution.stats.notes} notes</div></div>
+        <div class="metric"><div class="metric-label">Position shifts</div>
+          <div class="metric-val">${solution.stats.shifts}</div>
+          <div class="metric-cap">span ${solution.stats.span} frets</div></div>
+      </div>
+      <div class="tab" style="margin-top:14px">${tabFor(solution.path)}</div>
+      <div class="mission-foot" style="margin-top:14px">
+        <button class="btn primary" id="mPlay">Play the route</button>
+        <button class="btn" id="mDone">${done(m.id) ? 'Cleared' : 'Mark as cleared'}</button>
+        <span class="verdict ${verdict.ok?'ok':'no'}">${verdict.ok ? 'constraints held' : 'constraints broken'}</span>
+      </div>
+    </div>` : ''}
+
+    <div class="panel">
+      <p class="panel-title">Missions</p>
+      <div class="rows">
+        ${MISSIONS.map(x => `
+          <button class="row ${x.id===S.mission?'on':''}" data-mission="${x.id}">
+            <div>
+              <div class="row-name">${x.goal}</div>
+              <div class="row-sub">${x.tags.join(' · ')}</div>
+            </div>
+            <div class="row-scores">${done(x.id) ? '<span style="color:var(--signal)">cleared</span>' : '<span>open</span>'}</div>
+          </button>`).join('')}
+      </div>
+    </div>
+
+    <div class="panel">
+      <p class="panel-title">Fog of war · ${Progress.set.size} of ${STRINGS*(FRETS+1)} notes played</p>
+      ${fogMap()}
+      <p class="hint">Every note you hear anywhere in FretFlow gets added here. The neck reveals itself as you actually play it, not as you read about it.</p>
+    </div>`;
+
+  $('mRoot').onchange = e => { S.root = +e.target.value; render(); };
+  $('mScale').onchange = e => { S.scale = e.target.value; render(); };
+  $('mStart').oninput = e => { S.startFret = +e.target.value; render(); };
+  $('mFog').onchange = e => { S.fogOn = e.target.checked; render(); };
+  $('mReset').onclick = () => { Progress.reset(); render(); };
+  controls.querySelectorAll('#mStr button').forEach(b => b.onclick = () => { S.missionString = +b.dataset.v; render(); });
+  readout.querySelectorAll('[data-mission]').forEach(b => b.onclick = () => {
+    S.mission = b.dataset.mission === S.mission ? null : b.dataset.mission; render();
+  });
+  if (m && solution) {
+    $('mPlay').onclick = () => Player.play(S.tempo);
+    $('mDone').onclick = () => {
+      Progress.missions.add(m.id);
+      Progress.markMany(solution.path);
+      Progress.save(); render();
+    };
+  }
+}
+
+function fogMap() {
+  const W = 560, H = 98, pad = 14;
+  const cw = (W - pad * 2) / (FRETS + 1), rh = (H - pad - 8) / STRINGS;
+  let s = `<svg viewBox="0 0 ${W} ${H}" xmlns="${SVGNS}" style="width:100%;height:auto">`;
+  for (let st = 0; st < STRINGS; st++) for (let f = 0; f <= FRETS; f++) {
+    const on = Progress.has(st, f);
+    s += `<rect x="${pad + f * cw + 1}" y="${rowOf(st) * rh + 2}" width="${cw - 2}" height="${rh - 3}" rx="1.5"
+      fill="${on ? 'var(--signal)' : 'var(--line-soft)'}" opacity="${on ? .78 : 1}"/>`;
+  }
+  for (const f of [0, 3, 5, 7, 9, 12, 15])
+    s += `<text x="${pad + f * cw + cw / 2}" y="${H - 3}" text-anchor="middle" fill="var(--muted-2)" font-family="var(--mono)" font-size="8.5">${f}</text>`;
+  s += `</svg>`;
+  return s;
+}
+
+/* =========================================================================
+   ROUTER + GLOBAL WIRING
+   ========================================================================= */
+function render() {
+  Player.stop();
+  Player.onStep = null;
+  View.onTap = null;
+  if (S.mode === 'explore') renderExplore();
+  else if (S.mode === 'navigate') renderNavigate();
+  else if (S.mode === 'chords') renderChords();
+  else renderMissions();
+}
+
+document.querySelectorAll('.mode-btn').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.mode-btn').forEach(o => {
+    o.classList.toggle('is-active', o === b);
+    o.setAttribute('aria-selected', o === b ? 'true' : 'false');
+  });
+  S.mode = b.dataset.mode;
+  render();
+});
+
+$('playBtn').onclick = () => { Audio_.init(); Player.play(S.tempo); };
+$('stepBtn').onclick = () => { Audio_.init(); Player.stop(); Player.step(); };
+$('tempo').oninput = e => {
+  S.tempo = +e.target.value;
+  $('tempoVal').textContent = S.tempo + ' BPM';
+  if (Player.playing) { Player.stop(); Player.play(S.tempo); }
+};
+$('soundBtn').onclick = () => {
+  Audio_.on = !Audio_.on;
+  $('soundBtn').setAttribute('aria-pressed', String(Audio_.on));
+  $('soundBtn').innerHTML = `<span class="dot"></span>Sound ${Audio_.on ? 'on' : 'off'}`;
+  if (!Audio_.on) Player.stop();
+};
+
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+  if (e.code === 'Space') { e.preventDefault(); Audio_.init(); Player.play(S.tempo); }
+  if (e.key === 'ArrowRight') { e.preventDefault(); Player.stop(); Player.step(); }
+});
+
+Progress.load().then(render);
+
+</script>
+</body>
+</html>
